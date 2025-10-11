@@ -1,0 +1,111 @@
+basePath: /api/v1
+definitions:
+  models.Customer:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      complement:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      neighborhood:
+        type: string
+      number:
+        type: string
+      paymentDay:
+        type: integer
+      phone:
+        type: string
+      state:
+        type: string
+      zipCode:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is an internal API of a marketplace
+  title: Mercadinho API
+paths:
+  /customers:
+    get:
+      description: Returns a list of all customers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Customer'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all customers
+      tags:
+      - Customers
+    post:
+      consumes:
+      - application/json
+      description: Adds a new customer to the list
+      parameters:
+      - description: Customer data
+        in: body
+        name: customer
+        required: true
+        schema:
+          $ref: '#/definitions/models.Customer'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Customer'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new customer
+      tags:
+      - Customers
+  /customers/{id}:
+    get:
+      description: Returns a single customer by ID
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Customer'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a customer by ID
+      tags:
+      - Customers
+swagger: "2.0"
