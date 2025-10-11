@@ -1,0 +1,7 @@
+{
+	"watch": ["**/*.go"],
+	"ext": "go",
+	"exec": "./bin/start",
+	"ignore": ["docs/*"],
+	"delay": "500"
+}
