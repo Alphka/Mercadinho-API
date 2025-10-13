@@ -9,10 +9,12 @@ import (
 func RegisterPurchaseRoutes(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
 	{
-		customers := v1.Group("/purchases")
+		purchases := v1.Group("/purchases")
 		{
-			customers.GET("", controllers.GetPurchases)
-			customers.GET("/:id", controllers.GetPurchase)
+			purchases.GET("", controllers.GetPurchases)
+			purchases.GET("/:id", controllers.GetPurchase)
+			purchases.PUT("/:id", controllers.UpdatePurchase)
+			purchases.DELETE("/:id", controllers.DeletePurchase)
 		}
 	}
 }

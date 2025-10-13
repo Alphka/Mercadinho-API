@@ -4,6 +4,6 @@ CREATE TABLE IF NOT EXISTS product_purchase (
 	quantity INT NOT NULL,
 	purchase_id INT NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
 	product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NULL
+	created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+	updated_at TIMESTAMPTZ DEFAULT NULL
 );

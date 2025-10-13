@@ -1,0 +1,30 @@
+{
+	"cSpell.language": "en,pt,pt-BR",
+	"cSpell.words": [
+		"datname",
+		"dtos",
+		"github",
+		"godoc",
+		"godotenv",
+		"gonic",
+		"jackc",
+		"joho",
+		"mercadinho",
+		"pgxpool",
+		"plpgsql",
+		"postgres",
+		"swaggo"
+	],
+	"cSpell.ignorePaths": [
+		"vscode-extension",
+		".git/{info,lfs,logs,refs,objects}/**",
+		".git/{index,*refs,*HEAD}",
+		".vscode",
+		".vscode-insiders",
+		".gitignore",
+		"go.mod",
+		"go.sum",
+		"docs/**",
+		"output/**"
+	]
+}

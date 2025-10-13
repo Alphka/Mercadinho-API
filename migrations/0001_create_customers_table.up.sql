@@ -11,6 +11,6 @@ CREATE TABLE IF NOT EXISTS customers (
 	state VARCHAR(2),
 	zip_code VARCHAR(8),
 	payment_day INT,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NULL
+	created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+	updated_at TIMESTAMPTZ DEFAULT NULL
 );

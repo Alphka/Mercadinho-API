@@ -4,6 +4,7 @@ import (
 	"log"
 	"mercadinho/database"
 	"mercadinho/routes"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -18,16 +19,22 @@ import (
 
 // @BasePath  /api/v1
 func main() {
-	var host = "localhost:8080"
-
-	docs.SwaggerInfo.Host = host
-	docs.SwaggerInfo.Version = "1.0"
-	// docs.SwaggerInfo.Schemes = []string{"http", "https"}
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "8080"
+	}
+
+	host := "localhost:" + port
+
+	docs.SwaggerInfo.Host = host
+	docs.SwaggerInfo.Version = "1.0"
+	// docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	database.Connect()
 	defer database.Pool.Close()
@@ -37,6 +44,7 @@ func main() {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	routes.RegisterCustomerRoutes(router)
+	routes.RegisterProductRoutes(router)
 	routes.RegisterPurchaseRoutes(router)
 
 	router.Run(host)

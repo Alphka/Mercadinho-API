@@ -17,8 +17,9 @@ definitions:
       number:
         type: string
       paymentDay:
-        maximum: 32
-        minimum: 0
+        example: 10
+        maximum: 31
+        minimum: 1
         type: integer
       phone:
         type: string
@@ -38,20 +39,15 @@ definitions:
     - state
     - zipCode
     type: object
-  dtos.CreatePurchaseDTO:
+  dtos.CreateProductDTO:
     properties:
-      date:
-        $ref: '#/definitions/dtos.customDate'
-      paymentDate:
-        $ref: '#/definitions/dtos.customDate'
-      products:
-        items:
-          type: integer
-        minItems: 1
-        type: array
-    required:
-    - date
-    - products
+      description:
+        type: string
+      price:
+        example: 10.5
+        type: number
+    type: object
+  dtos.CreatePurchaseDTO:
     type: object
   dtos.EditCustomerDTO:
     properties:
@@ -70,8 +66,9 @@ definitions:
       number:
         type: string
       paymentDay:
-        maximum: 32
-        minimum: 0
+        example: 10
+        maximum: 31
+        minimum: 1
         type: integer
       phone:
         type: string
@@ -91,10 +88,21 @@ definitions:
     - state
     - zipCode
     type: object
-  dtos.customDate:
+  dtos.EditProductDTO:
     properties:
-      time.Time:
+      description:
         type: string
+      price:
+        example: 10.5
+        type: number
+    type: object
+  dtos.EditPurchaseDTO:
+    properties:
+      date:
+        example: "2025-10-13"
+        type: string
+    required:
+    - date
     type: object
   models.Customer:
     properties:
@@ -130,6 +138,19 @@ definitions:
   models.ErrorResponse:
     properties:
       error:
+        type: string
+    type: object
+  models.Product:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      price:
+        type: number
+      updatedAt:
         type: string
     type: object
   models.Purchase:
@@ -347,6 +368,115 @@ paths:
       summary: Register a new purchase
       tags:
       - Customers
+  /products:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all products
+      tags:
+      - Products
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product data
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateProductDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new product
+      tags:
+      - Products
+  /products/{id}:
+    get:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a product by ID
+      tags:
+      - Products
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated product data
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.EditProductDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a product by ID
+      tags:
+      - Products
   /purchases:
     get:
       produces:
@@ -366,6 +496,33 @@ paths:
       tags:
       - Purchases
   /purchases/{id}:
+    delete:
+      parameters:
+      - description: Purchase ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a purchase by ID
+      tags:
+      - Purchases
     get:
       produces:
       - application/json
@@ -383,6 +540,43 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Get a purchase by ID
+      tags:
+      - Purchases
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Purchase ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated purchase data
+        in: body
+        name: purchase
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.EditPurchaseDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Purchase'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a purchase by ID
       tags:
       - Purchases
 swagger: "2.0"

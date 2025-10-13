@@ -4,6 +4,7 @@ import (
 	"context"
 	"mercadinho/database"
 	"mercadinho/dtos"
+	"mercadinho/helpers"
 	"mercadinho/models"
 	"net/http"
 	"strconv"
@@ -21,7 +22,7 @@ import (
 // @Router      /customers [get]
 func GetCustomers(ctx *gin.Context) {
 	rows, err := database.Pool.Query(context.Background(), `
-		SELECT id, name, email, phone, address, complement, number, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
+		SELECT id, name, email, phone, address, number, complement, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
 		FROM customers
 	`)
 	if err != nil {
@@ -39,13 +40,13 @@ func GetCustomers(ctx *gin.Context) {
 		var customer models.Customer
 
 		err := rows.Scan(
-			&customer.ID,
+			&customer.Id,
 			&customer.Name,
 			&customer.Email,
 			&customer.Phone,
 			&customer.Address,
-			&customer.Complement,
 			&customer.Number,
+			&customer.Complement,
 			&customer.Neighborhood,
 			&customer.City,
 			&customer.State,
@@ -88,17 +89,17 @@ func GetCustomer(ctx *gin.Context) {
 	var customer models.Customer
 
 	err = database.Pool.QueryRow(context.Background(), `
-		SELECT id, name, email, phone, address, complement, number, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
+		SELECT id, name, email, phone, address, number, complement, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
 		FROM customers
 		WHERE id = $1
 	`, id).Scan(
-		&customer.ID,
+		&customer.Id,
 		&customer.Name,
 		&customer.Email,
 		&customer.Phone,
 		&customer.Address,
-		&customer.Complement,
 		&customer.Number,
+		&customer.Complement,
 		&customer.Neighborhood,
 		&customer.City,
 		&customer.State,
@@ -141,29 +142,29 @@ func CreateCustomer(ctx *gin.Context) {
 	var customer models.Customer
 
 	if err := database.Pool.QueryRow(context.Background(), `
-		INSERT INTO customers (name, email, phone, address, complement, number, neighborhood, city, state, zip_code, payment_day)
+		INSERT INTO customers (name, email, phone, address, number, complement, neighborhood, city, state, zip_code, payment_day)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING id, name, email, phone, address, complement, number, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
+		RETURNING id, name, email, phone, address, number, complement, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
 	`,
 		newCustomer.Name,
 		newCustomer.Email,
 		newCustomer.Phone,
 		newCustomer.Address,
-		newCustomer.Complement,
 		newCustomer.Number,
+		newCustomer.Complement,
 		newCustomer.Neighborhood,
 		newCustomer.City,
 		newCustomer.State,
 		newCustomer.ZIPCode,
 		newCustomer.PaymentDay,
 	).Scan(
-		&customer.ID,
+		&customer.Id,
 		&customer.Name,
 		&customer.Email,
 		&customer.Phone,
 		&customer.Address,
-		&customer.Complement,
 		&customer.Number,
+		&customer.Complement,
 		&customer.Neighborhood,
 		&customer.City,
 		&customer.State,
@@ -226,28 +227,28 @@ func UpdateCustomer(ctx *gin.Context) {
 			zip_code = $11,
 			payment_day = $12
 		WHERE id = $1
-		RETURNING id, name, email, phone, address, complement, number, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
+		RETURNING id, name, email, phone, address, number, complement, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
 	`,
 		id,
 		input.Name,
 		input.Email,
 		input.Phone,
 		input.Address,
-		input.Complement,
 		input.Number,
+		input.Complement,
 		input.Neighborhood,
 		input.City,
 		input.State,
 		input.ZIPCode,
 		input.PaymentDay,
 	).Scan(
-		&customer.ID,
+		&customer.Id,
 		&customer.Name,
 		&customer.Email,
 		&customer.Phone,
 		&customer.Address,
-		&customer.Complement,
 		&customer.Number,
+		&customer.Complement,
 		&customer.Neighborhood,
 		&customer.City,
 		&customer.State,
@@ -345,10 +346,10 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		var purchase models.Purchase
 
 		err := rows.Scan(
-			&purchase.ID,
+			&purchase.Id,
 			&purchase.Date,
 			&purchase.PaymentDate,
-			&purchase.CustomerID,
+			&purchase.CustomerId,
 			&purchase.CreatedAt,
 			&purchase.UpdatedAt,
 		)
@@ -415,8 +416,7 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 
 	var paymentDate *time.Time
 	if newPurchase.PaymentDate != nil {
-		time := newPurchase.PaymentDate.Time
-		paymentDate = &time
+		paymentDate = helpers.ParseDate(*newPurchase.PaymentDate)
 	} else {
 		paymentDate = nil
 	}
@@ -430,11 +430,11 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	`,
 		customerId,
 		totalPrice,
-		newPurchase.Date.Time,
+		helpers.ParseDate(newPurchase.Date),
 		paymentDate,
 	).Scan(
-		&purchase.ID,
-		&purchase.CustomerID,
+		&purchase.Id,
+		&purchase.CustomerId,
 		&purchase.TotalPrice,
 		&purchase.Date,
 		&purchase.PaymentDate,
@@ -443,7 +443,7 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: "Failed to create purchase",
+			Error: "Failed to register purchase",
 		})
 		return
 	}
@@ -452,7 +452,7 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		_, err = tx.Exec(context.Background(), `
 			INSERT INTO product_purchase (product_id, purchase_id)
 			VALUES ($1, $2)
-		`, productId, purchase.ID)
+		`, productId, purchase.Id)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 				Error: "Failed to link products to purchase",
@@ -470,5 +470,3 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 
 	ctx.IndentedJSON(http.StatusCreated, purchase)
 }
-
-// TODO: Create products controller

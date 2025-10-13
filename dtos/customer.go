@@ -11,7 +11,7 @@ type CreateCustomerDTO struct {
 	City         string  `json:"city" binding:"required"`
 	State        string  `json:"state" binding:"required,len=2"`
 	ZIPCode      string  `json:"zipCode" binding:"required,len=8"`
-	PaymentDay   int     `json:"paymentDay" binding:"required,gte=0,lte=32"`
+	PaymentDay   int     `json:"paymentDay" binding:"required,gte=1,lte=31" example:"10"`
 }
 
 type EditCustomerDTO struct {
@@ -25,5 +25,5 @@ type EditCustomerDTO struct {
 	City         string  `json:"city" binding:"required"`
 	State        string  `json:"state" binding:"required,len=2"`
 	ZIPCode      string  `json:"zipCode" binding:"required,len=8"`
-	PaymentDay   int     `json:"paymentDay" binding:"required,gte=0,lte=32"`
+	PaymentDay   int     `json:"paymentDay" binding:"required,gte=1,lte=31" example:"10"`
 }

@@ -4,6 +4,6 @@ CREATE TABLE IF NOT EXISTS purchases (
 	total_price NUMERIC(10,2) NOT NULL,
 	payment_date TIMESTAMP NULL,
 	customer_id INT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NULL
+	created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+	updated_at TIMESTAMPTZ DEFAULT NULL
 );

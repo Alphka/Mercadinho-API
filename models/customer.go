@@ -3,13 +3,13 @@ package models
 import "time"
 
 type Customer struct {
-	ID           int        `json:"id"`
+	Id           int        `json:"id"`
 	Name         string     `json:"name"`
 	Email        string     `json:"email"`
 	Phone        string     `json:"phone"`
 	Address      string     `json:"address"`
-	Complement   *string    `json:"complement"`
 	Number       string     `json:"number"`
+	Complement   *string    `json:"complement"`
 	Neighborhood string     `json:"neighborhood"`
 	City         string     `json:"city"`
 	State        string     `json:"state"`

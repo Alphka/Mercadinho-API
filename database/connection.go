@@ -72,5 +72,6 @@ func RunMigrations() {
 	if err := migration.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatalf("Migration error: %v\n", err)
 	}
+
 	fmt.Println("Migrations applied successfully.")
 }
