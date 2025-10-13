@@ -1,5 +1,101 @@
 basePath: /api/v1
 definitions:
+  dtos.CreateCustomerDTO:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      complement:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      neighborhood:
+        type: string
+      number:
+        type: string
+      paymentDay:
+        maximum: 32
+        minimum: 0
+        type: integer
+      phone:
+        type: string
+      state:
+        type: string
+      zipCode:
+        type: string
+    required:
+    - address
+    - city
+    - email
+    - name
+    - neighborhood
+    - number
+    - paymentDay
+    - phone
+    - state
+    - zipCode
+    type: object
+  dtos.CreatePurchaseDTO:
+    properties:
+      date:
+        $ref: '#/definitions/dtos.customDate'
+      paymentDate:
+        $ref: '#/definitions/dtos.customDate'
+      products:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - date
+    - products
+    type: object
+  dtos.EditCustomerDTO:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      complement:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      neighborhood:
+        type: string
+      number:
+        type: string
+      paymentDay:
+        maximum: 32
+        minimum: 0
+        type: integer
+      phone:
+        type: string
+      state:
+        type: string
+      zipCode:
+        type: string
+    required:
+    - address
+    - city
+    - email
+    - name
+    - neighborhood
+    - number
+    - paymentDay
+    - phone
+    - state
+    - zipCode
+    type: object
+  dtos.customDate:
+    properties:
+      time.Time:
+        type: string
+    type: object
   models.Customer:
     properties:
       address:
@@ -7,6 +103,8 @@ definitions:
       city:
         type: string
       complement:
+        type: string
+      createdAt:
         type: string
       email:
         type: string
@@ -24,12 +122,31 @@ definitions:
         type: string
       state:
         type: string
+      updatedAt:
+        type: string
       zipCode:
         type: string
     type: object
   models.ErrorResponse:
     properties:
       error:
+        type: string
+    type: object
+  models.Purchase:
+    properties:
+      createdAt:
+        type: string
+      customerId:
+        type: integer
+      date:
+        type: string
+      id:
+        type: integer
+      paymentDate:
+        type: string
+      totalPrice:
+        type: number
+      updatedAt:
         type: string
     type: object
 info:
@@ -39,7 +156,6 @@ info:
 paths:
   /customers:
     get:
-      description: Returns a list of all customers
       produces:
       - application/json
       responses:
@@ -49,8 +165,8 @@ paths:
             items:
               $ref: '#/definitions/models.Customer'
             type: array
-        "404":
-          description: Not Found
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Get all customers
@@ -59,14 +175,13 @@ paths:
     post:
       consumes:
       - application/json
-      description: Adds a new customer to the list
       parameters:
       - description: Customer data
         in: body
         name: customer
         required: true
         schema:
-          $ref: '#/definitions/models.Customer'
+          $ref: '#/definitions/dtos.CreateCustomerDTO'
       produces:
       - application/json
       responses:
@@ -78,12 +193,42 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Create a new customer
       tags:
       - Customers
   /customers/{id}:
+    delete:
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a customer by ID
+      tags:
+      - Customers
     get:
-      description: Returns a single customer by ID
       parameters:
       - description: Customer ID
         in: path
@@ -108,4 +253,136 @@ paths:
       summary: Get a customer by ID
       tags:
       - Customers
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated customer data
+        in: body
+        name: customer
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.EditCustomerDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Customer'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a customer by ID
+      tags:
+      - Customers
+  /customers/{id}/purchases:
+    get:
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Purchase'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all customer purchases
+      tags:
+      - Customers
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Purchase data
+        in: body
+        name: purchase
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreatePurchaseDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Purchase'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register a new purchase
+      tags:
+      - Customers
+  /purchases:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Purchase'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all registered purchases
+      tags:
+      - Purchases
+  /purchases/{id}:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Purchase'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a purchase by ID
+      tags:
+      - Purchases
 swagger: "2.0"

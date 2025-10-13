@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"golang.go",
+		"aaron-bond.better-comments",
+		"mikestead.dotenv",
+		"usernamehw.errorlens",
+		"editorconfig.editorconfig"
+	]
+}

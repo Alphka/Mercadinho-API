@@ -14,6 +14,11 @@ func RegisterCustomerRoutes(router *gin.Engine) {
 			customers.GET("", controllers.GetCustomers)
 			customers.GET("/:id", controllers.GetCustomer)
 			customers.POST("", controllers.CreateCustomer)
+			customers.PUT("/:id", controllers.UpdateCustomer)
+			customers.DELETE("/:id", controllers.DeleteCustomer)
+
+			customers.GET("/:id/purchases", controllers.GetCustomerPurchases)
+			customers.POST("/:id/purchases", controllers.CreateCustomerPurchase)
 		}
 	}
 }

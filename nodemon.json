@@ -1,5 +1,8 @@
 {
-	"watch": ["**/*.go"],
+	"watch": [
+		"**/*.go",
+		".env"
+	],
 	"ext": "go",
 	"exec": "./bin/start",
 	"ignore": ["docs/*"],

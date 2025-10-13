@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS purchases (
+	id SERIAL PRIMARY KEY,
+	date DATE NOT NULL,
+	total_price NUMERIC(10,2) NOT NULL,
+	payment_date TIMESTAMP NULL,
+	customer_id INT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NULL
+);

@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS products (
+	id SERIAL PRIMARY KEY,
+	price NUMERIC(10,2) NOT NULL,
+	description TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NULL
+);
