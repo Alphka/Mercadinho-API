@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"mercadinho/helpers"
 	"os"
 	"strings"
 
@@ -15,6 +14,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func extractDatabaseName(dsn string) string {
+	parts := strings.Split(dsn, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+
+	last := parts[len(parts)-1]
+	if idx := strings.Index(last, "?"); idx != -1 {
+		return last[:idx]
+	}
+
+	return last
+}
+
 var Pool *pgxpool.Pool
 
 func Connect() {
@@ -23,7 +36,7 @@ func Connect() {
 		log.Fatalln("DATABASE_URL not set")
 	}
 
-	dbName := helpers.ExtractDatabaseName(url)
+	dbName := extractDatabaseName(url)
 	if dbName == "" {
 		log.Fatalln("Could not parse database name from DATABASE_URL")
 	}
@@ -33,7 +46,6 @@ func Connect() {
 	if err != nil {
 		log.Fatalf("Failed to connect to PostgreSQL server: %v\n", err)
 	}
-
 	defer conn.Close(context.Background())
 
 	var databaseExists bool

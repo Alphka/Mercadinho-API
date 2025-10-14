@@ -30,7 +30,6 @@ func GetPurchases(ctx *gin.Context) {
 		})
 		return
 	}
-
 	defer rows.Close()
 
 	purchases := []models.Purchase{}
@@ -56,6 +55,15 @@ func GetPurchases(ctx *gin.Context) {
 		purchases = append(purchases, purchase)
 	}
 
+	for index := range purchases {
+		if err := helpers.LinkProductsToPurchase(&purchases[index], nil); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: err.Error(),
+			})
+			return
+		}
+	}
+
 	ctx.IndentedJSON(http.StatusOK, purchases)
 }
 
@@ -63,6 +71,7 @@ func GetPurchases(ctx *gin.Context) {
 // @Summary    Get a purchase by ID
 // @Tags       Purchases
 // @Produce    json
+// @Param      id             path  int  true  "Purchase ID"
 // @Success    200  {object}  models.Purchase
 // @Failure    400  {object}  models.ErrorResponse
 // @Failure    404  {object}  models.ErrorResponse
@@ -90,10 +99,16 @@ func GetPurchase(ctx *gin.Context) {
 		&purchase.CreatedAt,
 		&purchase.UpdatedAt,
 	)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Purchase not found",
+		})
+		return
+	}
+
+	if err := helpers.LinkProductsToPurchase(&purchase, nil); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
 		})
 		return
 	}
@@ -148,10 +163,16 @@ func UpdatePurchase(ctx *gin.Context) {
 		&purchase.CreatedAt,
 		&purchase.UpdatedAt,
 	)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Purchase not found",
+		})
+		return
+	}
+
+	if err := helpers.LinkProductsToPurchase(&purchase, nil); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
 		})
 		return
 	}
@@ -182,7 +203,6 @@ func DeletePurchase(ctx *gin.Context) {
 		DELETE FROM purchases
 		WHERE id = $1
 	`, id)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to delete purchase",

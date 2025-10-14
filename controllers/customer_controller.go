@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"mercadinho/database"
 	"mercadinho/dtos"
 	"mercadinho/helpers"
 	"mercadinho/models"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +33,6 @@ func GetCustomers(ctx *gin.Context) {
 		})
 		return
 	}
-
 	defer rows.Close()
 
 	customers := []models.Customer{}
@@ -108,7 +109,6 @@ func GetCustomer(ctx *gin.Context) {
 		&customer.CreatedAt,
 		&customer.UpdatedAt,
 	)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Customer not found",
@@ -257,7 +257,6 @@ func UpdateCustomer(ctx *gin.Context) {
 		&customer.CreatedAt,
 		&customer.UpdatedAt,
 	)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Customer not found",
@@ -291,7 +290,6 @@ func DeleteCustomer(ctx *gin.Context) {
 		DELETE FROM customers
 		WHERE id = $1
 	`, id)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to delete customer",
@@ -315,6 +313,8 @@ func DeleteCustomer(ctx *gin.Context) {
 // @Produce             json
 // @Param               id   path      int  true  "Customer ID"
 // @Success             200  {array}   models.Purchase
+// @Success             400  {object}  models.ErrorResponse
+// @Success             404  {object}  models.ErrorResponse
 // @Failure             500  {object}  models.ErrorResponse
 // @Router              /customers/{id}/purchases [get]
 func GetCustomerPurchases(ctx *gin.Context) {
@@ -322,6 +322,13 @@ func GetCustomerPurchases(ctx *gin.Context) {
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
 			Error: "Invalid ID",
+		})
+		return
+	}
+
+	if err := database.Pool.QueryRow(context.Background(), "SELECT id FROM customers WHERE id = $1", customerId).Scan(&customerId); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+			Error: "Customer not found",
 		})
 		return
 	}
@@ -337,7 +344,6 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		})
 		return
 	}
-
 	defer rows.Close()
 
 	purchases := []models.Purchase{}
@@ -361,6 +367,15 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		}
 
 		purchases = append(purchases, purchase)
+	}
+
+	for index := range purchases {
+		if err := helpers.LinkProductsToPurchase(&purchases[index], nil); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: err.Error(),
+			})
+			return
+		}
 	}
 
 	ctx.IndentedJSON(http.StatusOK, purchases)
@@ -395,6 +410,64 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		return
 	}
 
+	if err := database.Pool.QueryRow(context.Background(), "SELECT id FROM customers WHERE id = $1", customerId).Scan(&customerId); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+			Error: "Customer not found",
+		})
+		return
+	}
+
+	productIds := make([]int, len(newPurchase.Products))
+	for index, product := range newPurchase.Products {
+		productIds[index] = product.Id
+	}
+
+	rows, err := database.Pool.Query(context.Background(), "SELECT id, price FROM products WHERE id = ANY($1)", productIds)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Failed to check products",
+		})
+		return
+	}
+	defer rows.Close()
+
+	foundProductsWithPrice := make(map[int]float64)
+
+	for rows.Next() {
+		var id int
+		var price float64
+
+		if err := rows.Scan(&id, &price); err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: "Failed reading product rows",
+			})
+			return
+		}
+
+		foundProductsWithPrice[id] = price
+	}
+
+	var productsNotFound []string
+	var totalPrice float64
+
+	for _, product := range newPurchase.Products {
+		price, exists := foundProductsWithPrice[product.Id]
+
+		if !exists {
+			productsNotFound = append(productsNotFound, strconv.Itoa(product.Id))
+			continue
+		}
+
+		totalPrice += price * float64(product.Quantity)
+	}
+
+	if len(productsNotFound) > 0 {
+		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+			Error: fmt.Sprintf("Products not found: %s", strings.Join(productsNotFound, ", ")),
+		})
+		return
+	}
+
 	tx, err := database.Pool.Begin(context.Background())
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -402,17 +475,7 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		})
 		return
 	}
-
 	defer tx.Rollback(context.Background())
-
-	var totalPrice float64
-
-	if err := tx.QueryRow(context.Background(), "SELECT COALESCE(SUM(price), 0) FROM products WHERE id = ANY($1)", newPurchase.Products).Scan(&totalPrice); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: "Failed to calculate total price",
-		})
-		return
-	}
 
 	var paymentDate *time.Time
 	if newPurchase.PaymentDate != nil {
@@ -448,11 +511,13 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		return
 	}
 
-	for _, productId := range newPurchase.Products {
+	for _, product := range newPurchase.Products {
+		price := foundProductsWithPrice[product.Id]
+
 		_, err = tx.Exec(context.Background(), `
-			INSERT INTO product_purchase (product_id, purchase_id)
-			VALUES ($1, $2)
-		`, productId, purchase.Id)
+			INSERT INTO product_purchase (price, quantity, product_id, purchase_id)
+			VALUES ($1, $2, $3, $4)
+		`, price, product.Quantity, product.Id, purchase.Id)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 				Error: "Failed to link products to purchase",
@@ -464,6 +529,19 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	if err := tx.Commit(context.Background()); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to commit transaction",
+		})
+		return
+	}
+
+	var foundProductIds []int
+
+	for key := range foundProductsWithPrice {
+		foundProductIds = append(foundProductIds, key)
+	}
+
+	if err := helpers.LinkProductsToPurchase(&purchase, &foundProductIds); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
 		})
 		return
 	}

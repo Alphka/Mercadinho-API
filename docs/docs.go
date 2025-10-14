@@ -251,6 +251,18 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -514,6 +526,15 @@ const docTemplate = `{
                     "Purchases"
                 ],
                 "summary": "Get a purchase by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Purchase ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -701,7 +722,41 @@ const docTemplate = `{
             }
         },
         "dtos.CreatePurchaseDTO": {
-            "type": "object"
+            "type": "object",
+            "required": [
+                "date",
+                "products"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2025-10-13"
+                },
+                "paymentDate": {
+                    "type": "string",
+                    "example": "2025-10-13"
+                },
+                "products": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "quantity"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "quantity": {
+                                "type": "integer",
+                                "minimum": 1
+                            }
+                        }
+                    }
+                }
+            }
         },
         "dtos.EditCustomerDTO": {
             "type": "object",
@@ -872,6 +927,23 @@ const docTemplate = `{
                 },
                 "paymentDate": {
                     "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "price": {
+                                "type": "number"
+                            },
+                            "quantity": {
+                                "type": "integer"
+                            }
+                        }
+                    }
                 },
                 "totalPrice": {
                     "type": "number"

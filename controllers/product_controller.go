@@ -30,7 +30,6 @@ func GetProducts(ctx *gin.Context) {
 		})
 		return
 	}
-
 	defer rows.Close()
 
 	products := []models.Product{}
@@ -89,7 +88,6 @@ func GetProduct(ctx *gin.Context) {
 		&product.CreatedAt,
 		&product.UpdatedAt,
 	)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Product not found",
@@ -178,9 +176,8 @@ func UpdateProduct(ctx *gin.Context) {
 	var product models.Product
 
 	err = database.Pool.QueryRow(context.Background(), `
-		UPDATE purchases
-		SET price = $2,
-			description = $3
+		UPDATE products
+		SET price = $2, description = $3
 		WHERE id = $1
 		RETURNING id, price, description, created_at, updated_at
 	`,
@@ -194,7 +191,6 @@ func UpdateProduct(ctx *gin.Context) {
 		&product.CreatedAt,
 		&product.UpdatedAt,
 	)
-
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Product not found",
