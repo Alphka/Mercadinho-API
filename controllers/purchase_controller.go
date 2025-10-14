@@ -16,14 +16,31 @@ import (
 // @Summary     Get all registered purchases
 // @Tags        Purchases
 // @Produce     json
-// @Success     200  {array}   models.Purchase
+// @Param       page           query  int  false  "Page number" default(1)
+// @Param       pageSize       query  int  false  "Number of items per page" default(20)
+// @Success     200  {array}   models.PaginatedResponse[models.Purchase]
 // @Failure     500  {object}  models.ErrorResponse
 // @Router      /purchases [get]
 func GetPurchases(ctx *gin.Context) {
+	var totalItems int
+
+	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases`).Scan(&totalItems)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+
+	page, pageSize, totalPages := helpers.ValidatePagination(ctx, totalItems)
+
 	rows, err := database.Pool.Query(context.Background(), `
 		SELECT id, date, payment_date, customer_id, created_at, updated_at
 		FROM purchases
-	`)
+		ORDER BY created_at DESC
+		OFFSET (($1 - 1) * $2)
+		LIMIT $2
+	`, page, pageSize)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
@@ -64,7 +81,13 @@ func GetPurchases(ctx *gin.Context) {
 		}
 	}
 
-	ctx.IndentedJSON(http.StatusOK, purchases)
+	ctx.IndentedJSON(http.StatusOK, models.PaginatedResponse[models.Purchase]{
+		Data:       purchases,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: totalItems,
+		TotalPages: totalPages,
+	})
 }
 
 // GetPurchase godoc
