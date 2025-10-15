@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mercadinho/database"
 	"mercadinho/dtos"
+	"mercadinho/helpers"
 	"mercadinho/models"
 	"net/http"
 	"strconv"
@@ -16,14 +17,31 @@ import (
 // @Summary    Get all products
 // @Tags       Products
 // @Produce    json
-// @Success    200  {array}   models.Product
+// @Param      page          query  int  false  "Page number" default(1)
+// @Param      pageSize      query  int  false  "Number of items per page" default(20)
+// @Success    200  {array}   models.PaginatedResponse[models.Product]
 // @Failure    500  {object}  models.ErrorResponse
 // @Router     /products [get]
 func GetProducts(ctx *gin.Context) {
+	var totalItems int
+
+	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM products`).Scan(&totalItems)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+
+	page, pageSize, totalPages := helpers.ValidatePagination(ctx, totalItems)
+
 	rows, err := database.Pool.Query(context.Background(), `
 		SELECT id, price, description, created_at, updated_at
 		FROM products
-	`)
+		ORDER BY created_at DESC
+		OFFSET (($1 - 1) * $2)
+		LIMIT $2
+	`, page, pageSize)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
@@ -54,7 +72,13 @@ func GetProducts(ctx *gin.Context) {
 		products = append(products, product)
 	}
 
-	ctx.IndentedJSON(http.StatusOK, products)
+	ctx.IndentedJSON(http.StatusOK, models.PaginatedResponse[models.Product]{
+		Data:       products,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: totalItems,
+		TotalPages: totalPages,
+	})
 }
 
 // GetProduct godoc

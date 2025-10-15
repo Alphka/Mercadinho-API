@@ -98,6 +98,7 @@ func GetPurchases(ctx *gin.Context) {
 // @Success    200  {object}  models.Purchase
 // @Failure    400  {object}  models.ErrorResponse
 // @Failure    404  {object}  models.ErrorResponse
+// @Failure    500  {object}  models.ErrorResponse
 // @Router     /purchases/{id} [get]
 func GetPurchase(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))

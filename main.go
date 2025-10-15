@@ -41,6 +41,7 @@ func main() {
 	database.RunMigrations()
 
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	routes.RegisterCustomerRoutes(router)

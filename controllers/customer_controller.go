@@ -19,14 +19,31 @@ import (
 // @Summary     Get all customers
 // @Tags        Customers
 // @Produce     json
-// @Success     200  {array}   models.Customer
+// @Param       page           query  int  false  "Page number" default(1)
+// @Param       pageSize       query  int  false  "Number of items per page" default(20)
+// @Success     200  {array}   models.PaginatedResponse[models.Customer]
 // @Failure     500  {object}  models.ErrorResponse
 // @Router      /customers [get]
 func GetCustomers(ctx *gin.Context) {
+	var totalItems int
+
+	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM products`).Scan(&totalItems)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+
+	page, pageSize, totalPages := helpers.ValidatePagination(ctx, totalItems)
+
 	rows, err := database.Pool.Query(context.Background(), `
 		SELECT id, name, email, phone, address, number, complement, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
 		FROM customers
-	`)
+		ORDER BY created_at DESC
+		OFFSET (($1 - 1) * $2)
+		LIMIT $2
+	`, page, pageSize)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
@@ -66,7 +83,13 @@ func GetCustomers(ctx *gin.Context) {
 		customers = append(customers, customer)
 	}
 
-	ctx.IndentedJSON(http.StatusOK, customers)
+	ctx.IndentedJSON(http.StatusOK, models.PaginatedResponse[models.Customer]{
+		Data:       customers,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: totalItems,
+		TotalPages: totalPages,
+	})
 }
 
 // GetCustomer godoc
@@ -192,7 +215,6 @@ func CreateCustomer(ctx *gin.Context) {
 // @Success       200      {object}  models.Customer
 // @Failure       400      {object}  models.ErrorResponse
 // @Failure       404      {object}  models.ErrorResponse
-// @Failure       500      {object}  models.ErrorResponse
 // @Router        /customers/{id} [put]
 func UpdateCustomer(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -307,14 +329,136 @@ func DeleteCustomer(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+// GetCustomerPendingPayments godoc
+// @Summary               Get all customer purchases with pending payments
+// @Tags                  Customers
+// @Produce               json
+// @Param                 id        path      int                     true  "Customer ID"
+// @Success               200       {object}  []models.CustomerPendingPayment
+// @Failure               400       {object}  models.ErrorResponse
+// @Failure               500       {object}  models.ErrorResponse
+// @Router                /customers/{id}/pending-payments [get]
+func GetCustomerPendingPayments(ctx *gin.Context) {
+	customerId, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "Invalid ID",
+		})
+		return
+	}
+
+	rows, err := database.Pool.Query(context.Background(), `
+		SELECT id, date, total_price, created_at, updated_at
+		FROM purchases
+		WHERE customer_id = $1 AND payment_date IS NULL
+		ORDER BY created_at DESC
+	`, customerId)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+	defer rows.Close()
+
+	purchases := []models.CustomerPendingPayment{}
+
+	for rows.Next() {
+		var purchase models.CustomerPendingPayment
+
+		err := rows.Scan(
+			&purchase.Id,
+			&purchase.Date,
+			&purchase.TotalPrice,
+			&purchase.CreatedAt,
+			&purchase.UpdatedAt,
+		)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		purchases = append(purchases, purchase)
+	}
+
+	ctx.IndentedJSON(http.StatusOK, purchases)
+}
+
+// GetCustomerOverduePayments godoc
+// @Summary               Get all customer purchases that are overdue (past payment date)
+// @Tags                  Customers
+// @Produce               json
+// @Param                 id        path      int  true  "Customer ID"
+// @Success               200       {object}  []models.CustomerPendingPayment
+// @Failure               400       {object}  models.ErrorResponse
+// @Failure               500       {object}  models.ErrorResponse
+// @Router                /customers/{id}/overdue-payments [get]
+func GetCustomerOverduePayments(ctx *gin.Context) {
+	customerId, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "Invalid ID",
+		})
+		return
+	}
+
+	rows, err := database.Pool.Query(context.Background(), `
+		SELECT product.id, product.date, product.total_price, product.created_at, product.updated_at
+		FROM purchases product
+		JOIN customers customer ON customer.id = product.customer_id
+		WHERE
+			product.customer_id = $1
+			AND product.payment_date IS NULL
+			AND CURRENT_DATE > (
+				date_trunc('month', product.date) + interval '1 month' + (customer.payment_day - 1) * interval '1 day'
+			)
+		ORDER BY product.created_at DESC
+	`, customerId)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+	defer rows.Close()
+
+	purchases := []models.CustomerPendingPayment{}
+
+	for rows.Next() {
+		var purchase models.CustomerPendingPayment
+
+		err := rows.Scan(
+			&purchase.Id,
+			&purchase.Date,
+			&purchase.TotalPrice,
+			&purchase.CreatedAt,
+			&purchase.UpdatedAt,
+		)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		purchases = append(purchases, purchase)
+	}
+
+	ctx.IndentedJSON(http.StatusOK, purchases)
+}
+
 // GetCustomerPurchases godoc
 // @Summary             Get all customer purchases
 // @Tags                Customers
 // @Produce             json
-// @Param               id   path      int  true  "Customer ID"
-// @Success             200  {array}   models.Purchase
-// @Success             400  {object}  models.ErrorResponse
-// @Success             404  {object}  models.ErrorResponse
+// @Param               id             path  int  true  "Customer ID"
+// @Param               page           query  int  false  "Page number" default(1)
+// @Param               pageSize       query  int  false  "Number of items per page" default(20)
+// @Success             200  {array}   models.PaginatedResponse[models.Purchase]
+// @Failure             400  {object}  models.ErrorResponse
+// @Failure             404  {object}  models.ErrorResponse
 // @Failure             500  {object}  models.ErrorResponse
 // @Router              /customers/{id}/purchases [get]
 func GetCustomerPurchases(ctx *gin.Context) {
@@ -333,11 +477,26 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		return
 	}
 
+	var totalItems int
+
+	err = database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases`).Scan(&totalItems)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+
+	page, pageSize, totalPages := helpers.ValidatePagination(ctx, totalItems)
+
 	rows, err := database.Pool.Query(context.Background(), `
 		SELECT id, date, payment_date, customer_id, created_at, updated_at
 		FROM purchases
 		WHERE customer_id = $1
-	`, customerId)
+		ORDER BY created_at DESC
+		OFFSET (($2 - 1) * $3)
+		LIMIT $3
+	`, customerId, page, pageSize)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
@@ -378,7 +537,13 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		}
 	}
 
-	ctx.IndentedJSON(http.StatusOK, purchases)
+	ctx.IndentedJSON(http.StatusOK, models.PaginatedResponse[models.Purchase]{
+		Data:       purchases,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: totalItems,
+		TotalPages: totalPages,
+	})
 }
 
 // CreateCustomerPurchase godoc
@@ -390,6 +555,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 // @Param                 purchase  body      dtos.CreatePurchaseDTO  true  "Purchase data"
 // @Success               201       {object}  models.Purchase
 // @Failure               400       {object}  models.ErrorResponse
+// @Failure               404       {object}  models.ErrorResponse
 // @Failure               500       {object}  models.ErrorResponse
 // @Router                /customers/{id}/purchases [post]
 func CreateCustomerPurchase(ctx *gin.Context) {

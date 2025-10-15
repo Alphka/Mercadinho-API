@@ -13,7 +13,8 @@
 		"pgxpool",
 		"plpgsql",
 		"postgres",
-		"swaggo"
+		"swaggo",
+		"trunc"
 	],
 	"cSpell.ignorePaths": [
 		"vscode-extension",
