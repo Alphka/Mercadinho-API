@@ -130,6 +130,12 @@
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
                     }
                 }
             },
@@ -177,6 +183,12 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -553,6 +565,12 @@
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
                     }
                 }
             },
@@ -898,9 +916,13 @@
         },
         "dtos.CreateProductDTO": {
             "type": "object",
+            "required": [
+                "description"
+            ],
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 3
                 },
                 "price": {
                     "type": "number",
@@ -1000,9 +1022,14 @@
         },
         "dtos.EditProductDTO": {
             "type": "object",
+            "required": [
+                "description",
+                "price"
+            ],
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 3
                 },
                 "price": {
                     "type": "number",

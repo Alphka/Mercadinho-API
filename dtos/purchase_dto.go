@@ -1,5 +1,7 @@
 package dtos
 
+import "strings"
+
 type CreatePurchaseDTO struct {
 	Date     string `json:"date" binding:"required" example:"2025-10-13"`
 	Products []struct {
@@ -9,6 +11,14 @@ type CreatePurchaseDTO struct {
 	PaymentDate *string `json:"paymentDate" example:"2025-10-13"`
 }
 
+func (dto *CreatePurchaseDTO) Sanitize() {
+	dto.Date = strings.TrimSpace(dto.Date)
+}
+
 type EditPurchaseDTO struct {
 	Date string `json:"date" binding:"required" example:"2025-10-13"`
+}
+
+func (dto *EditPurchaseDTO) Sanitize() {
+	dto.Date = strings.TrimSpace(dto.Date)
 }

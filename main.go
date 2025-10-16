@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -35,6 +37,26 @@ func main() {
 	docs.SwaggerInfo.Host = host
 	docs.SwaggerInfo.Version = "1.0"
 	// docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
+	if validate, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		validate.RegisterValidation("price", func(fieldLevel validator.FieldLevel) bool {
+			price, ok := fieldLevel.Field().Interface().(float64)
+			if !ok {
+				return false
+			}
+
+			if price <= 0 {
+				return false
+			}
+
+			scaledPrice := price * 100
+			if scaledPrice != float64(int64(scaledPrice)) {
+				return false
+			}
+
+			return true
+		})
+	}
 
 	database.Connect()
 	defer database.Pool.Close()

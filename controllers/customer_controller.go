@@ -3,7 +3,9 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"mercadinho/database"
 	"mercadinho/dtos"
 	"mercadinho/helpers"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
 // GetCustomers godoc
@@ -30,8 +33,10 @@ func GetCustomers(ctx *gin.Context) {
 
 	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM products`).Scan(&totalItems)
 	if err != nil {
+		log.Printf("failed to get total customers: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -46,8 +51,10 @@ func GetCustomers(ctx *gin.Context) {
 		LIMIT $2
 	`, page, pageSize)
 	if err != nil {
+		log.Printf("failed to get customers: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Failed to get customers",
 		})
 		return
 	}
@@ -75,8 +82,10 @@ func GetCustomers(ctx *gin.Context) {
 			&customer.UpdatedAt,
 		)
 		if err != nil {
+			log.Printf("failed to scan customers: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Failed to get customers",
 			})
 			return
 		}
@@ -101,6 +110,7 @@ func GetCustomers(ctx *gin.Context) {
 // @Success    200       {object}  models.Customer
 // @Failure    400       {object}  models.ErrorResponse
 // @Failure    404       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
 // @Router     /customers/{id} [get]
 func GetCustomer(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -113,7 +123,7 @@ func GetCustomer(ctx *gin.Context) {
 
 	var customer models.Customer
 
-	err = database.Pool.QueryRow(context.Background(), `
+	if err := database.Pool.QueryRow(context.Background(), `
 		SELECT id, name, email, phone, address, number, complement, neighborhood, city, state, zip_code, payment_day, created_at, updated_at
 		FROM customers
 		WHERE id = $1
@@ -132,10 +142,18 @@ func GetCustomer(ctx *gin.Context) {
 		&customer.PaymentDay,
 		&customer.CreatedAt,
 		&customer.UpdatedAt,
-	)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Customer not found",
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Customer not found",
+			})
+			return
+		}
+
+		log.Printf("error fetching customer %d: %v", id, err)
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -156,12 +174,12 @@ func GetCustomer(ctx *gin.Context) {
 func CreateCustomer(ctx *gin.Context) {
 	var newCustomer dtos.CreateCustomerDTO
 
-	if err := ctx.BindJSON(&newCustomer); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "Invalid data",
-		})
+	if err := ctx.ShouldBindJSON(&newCustomer); err != nil {
+		helpers.HandleValidationError(ctx, err)
 		return
 	}
+
+	newCustomer.Sanitize()
 
 	var customer models.Customer
 
@@ -197,6 +215,8 @@ func CreateCustomer(ctx *gin.Context) {
 		&customer.CreatedAt,
 		&customer.UpdatedAt,
 	); err != nil {
+		log.Printf("failed to insert customer: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to create customer",
 		})
@@ -216,6 +236,7 @@ func CreateCustomer(ctx *gin.Context) {
 // @Success       200       {object}  models.Customer
 // @Failure       400       {object}  models.ErrorResponse
 // @Failure       404       {object}  models.ErrorResponse
+// @Failure       500       {object}  models.ErrorResponse
 // @Router        /customers/{id} [put]
 func UpdateCustomer(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -227,16 +248,17 @@ func UpdateCustomer(ctx *gin.Context) {
 	}
 
 	var input dtos.EditCustomerDTO
-	if err := ctx.BindJSON(&input); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "Invalid data",
-		})
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		helpers.HandleValidationError(ctx, err)
 		return
 	}
 
+	input.Sanitize()
+
 	var customer models.Customer
 
-	err = database.Pool.QueryRow(context.Background(), `
+	if err := database.Pool.QueryRow(context.Background(), `
 		UPDATE customers
 		SET name = $2,
 			email = $3,
@@ -279,10 +301,18 @@ func UpdateCustomer(ctx *gin.Context) {
 		&customer.PaymentDay,
 		&customer.CreatedAt,
 		&customer.UpdatedAt,
-	)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Customer not found",
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Customer not found",
+			})
+			return
+		}
+
+		log.Printf("error fetching customer %d: %v", id, err)
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -355,8 +385,10 @@ func GetCustomerPendingPayments(ctx *gin.Context) {
 		ORDER BY created_at DESC
 	`, customerId)
 	if err != nil {
+		log.Printf("failed to get customer pending payments: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Failed to get customer purchases",
 		})
 		return
 	}
@@ -375,8 +407,10 @@ func GetCustomerPendingPayments(ctx *gin.Context) {
 			&purchase.UpdatedAt,
 		)
 		if err != nil {
+			log.Printf("failed to scan customer pending payments: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Failed to get customer purchases",
 			})
 			return
 		}
@@ -418,8 +452,10 @@ func GetCustomerOverduePayments(ctx *gin.Context) {
 		ORDER BY product.created_at DESC
 	`, customerId)
 	if err != nil {
+		log.Printf("failed to get customer pending payments: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Failed to get customer purchases",
 		})
 		return
 	}
@@ -438,8 +474,10 @@ func GetCustomerOverduePayments(ctx *gin.Context) {
 			&purchase.UpdatedAt,
 		)
 		if err != nil {
+			log.Printf("failed to scan customer pending payments: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Failed to get customer purchases",
 			})
 			return
 		}
@@ -480,8 +518,17 @@ func GetCustomerPurchases(ctx *gin.Context) {
 			WHERE id = $1
 		)
 	`, customerId).Scan(&customerExists); err != nil || !customerExists {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Customer not found",
+		if !customerExists {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Customer not found",
+			})
+			return
+		}
+
+		log.Printf("error fetching customer purchases %d: %v", customerId, err)
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -489,8 +536,10 @@ func GetCustomerPurchases(ctx *gin.Context) {
 	var totalItems int
 
 	if err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases`).Scan(&totalItems); err != nil {
+		log.Printf("failed to get total purchases: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -513,7 +562,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 						'description', product.description,
 						'quantity', product_purchase.quantity
 					)
-				) FILTER (WHERE product.id IS NOT NULL),
+				),
 				'[]'
 			) AS products
 		FROM purchases purchase
@@ -526,8 +575,10 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		LIMIT $3
 	`, customerId, page, pageSize)
 	if err != nil {
+		log.Printf("failed to get customer purchases: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Failed to get customer purchases",
 		})
 		return
 	}
@@ -549,15 +600,19 @@ func GetCustomerPurchases(ctx *gin.Context) {
 			&productsJSON,
 		)
 		if err != nil {
+			log.Printf("failed to scan customer purchases: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Failed to get customer purchases",
 			})
 			return
 		}
 
 		if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
+			log.Printf("failed to link customer purchase products: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Internal server error",
 			})
 			return
 		}
@@ -595,15 +650,6 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		return
 	}
 
-	var newPurchase dtos.CreatePurchaseDTO
-
-	if err := ctx.BindJSON(&newPurchase); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "Invalid data",
-		})
-		return
-	}
-
 	var customerExists bool
 
 	if err := database.Pool.QueryRow(context.Background(), `
@@ -613,19 +659,44 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 			WHERE id = $1
 		)
 	`, customerId).Scan(&customerExists); err != nil || !customerExists {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Customer not found",
+		if !customerExists {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Customer not found",
+			})
+			return
+		}
+
+		log.Printf("error fetching customer %d: %v", customerId, err)
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}
 
+	var newPurchase dtos.CreatePurchaseDTO
+
+	if err := ctx.ShouldBindJSON(&newPurchase); err != nil {
+		helpers.HandleValidationError(ctx, err)
+		return
+	}
+
+	newPurchase.Sanitize()
+
 	productIds := make([]int, len(newPurchase.Products))
+
 	for index, product := range newPurchase.Products {
 		productIds[index] = product.Id
 	}
 
-	rows, err := database.Pool.Query(context.Background(), "SELECT id, price FROM products WHERE id = ANY($1)", productIds)
+	rows, err := database.Pool.Query(context.Background(), `
+		SELECT id, price
+		FROM products
+		WHERE id = ANY($1) AND is_deleted IS FALSE
+	`, productIds)
 	if err != nil {
+		log.Printf("failed to fetch products: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to check products",
 		})
@@ -633,15 +704,17 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	}
 	defer rows.Close()
 
-	foundProductsWithPrice := make(map[int]float64)
+	foundProductsWithPrice := map[int]float64{}
 
 	for rows.Next() {
 		var id int
 		var price float64
 
 		if err := rows.Scan(&id, &price); err != nil {
+			log.Printf("failed to scan products: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: "Failed reading product rows",
+				Error: "Internal server error",
 			})
 			return
 		}
@@ -672,6 +745,8 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 
 	tx, err := database.Pool.Begin(context.Background())
 	if err != nil {
+		log.Printf("failed to start transaction: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to start transaction",
 		})
@@ -707,6 +782,8 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		&purchase.UpdatedAt,
 	)
 	if err != nil {
+		log.Printf("failed to insert purchase: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to register purchase",
 		})
@@ -729,6 +806,8 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	}
 
 	if err := tx.Commit(context.Background()); err != nil {
+		log.Printf("failed to commit transaction: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to commit transaction",
 		})
@@ -746,7 +825,7 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 					'description', product.description,
 					'quantity', product_purchase.quantity
 				)
-			) FILTER (WHERE product.id IS NOT NULL),
+			),
 			'[]'
 		)
 		FROM product_purchase
@@ -754,6 +833,8 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		WHERE product_purchase.purchase_id = $1
 	`, purchase.Id).Scan(&productsJSON)
 	if err != nil {
+		log.Printf("failed to fetch purchase products: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to fetch purchase products",
 		})
@@ -761,8 +842,10 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	}
 
 	if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
+		log.Printf("failed to link purchase products: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Internal server error",
 		})
 		return
 	}

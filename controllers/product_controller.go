@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"log"
 	"mercadinho/database"
 	"mercadinho/dtos"
 	"mercadinho/helpers"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
 // GetProducts godoc
@@ -31,8 +33,10 @@ func GetProducts(ctx *gin.Context) {
 		WHERE is_deleted IS FALSE
 	`).Scan(&totalItems)
 	if err != nil {
+		log.Printf("failed to get total products: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -48,8 +52,10 @@ func GetProducts(ctx *gin.Context) {
 		LIMIT $2
 	`, page, pageSize)
 	if err != nil {
+		log.Printf("failed to get products: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Failed to get products",
 		})
 		return
 	}
@@ -68,8 +74,10 @@ func GetProducts(ctx *gin.Context) {
 			&product.UpdatedAt,
 		)
 		if err != nil {
+			log.Printf("failed to scan products: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Failed to get products",
 			})
 			return
 		}
@@ -94,6 +102,7 @@ func GetProducts(ctx *gin.Context) {
 // @Success    200      {object}  models.Product
 // @Failure    400      {object}  models.ErrorResponse
 // @Failure    404      {object}  models.ErrorResponse
+// @Failure    500      {object}  models.ErrorResponse
 // @Router     /products/{id} [get]
 func GetProduct(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -118,8 +127,17 @@ func GetProduct(ctx *gin.Context) {
 		&product.UpdatedAt,
 	)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Product not found",
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Product not found",
+			})
+			return
+		}
+
+		log.Printf("error fetching product %d: %v", id, err)
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -140,12 +158,12 @@ func GetProduct(ctx *gin.Context) {
 func CreateProduct(ctx *gin.Context) {
 	var newProduct dtos.CreateProductDTO
 
-	if err := ctx.BindJSON(&newProduct); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "Invalid data",
-		})
+	if err := ctx.ShouldBindJSON(&newProduct); err != nil {
+		helpers.HandleValidationError(ctx, err)
 		return
 	}
+
+	newProduct.Sanitize()
 
 	var product models.Product
 
@@ -163,7 +181,8 @@ func CreateProduct(ctx *gin.Context) {
 		&product.CreatedAt,
 		&product.UpdatedAt,
 	); err != nil {
-		fmt.Println(err.Error())
+		log.Printf("failed to insert product: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to create product",
 		})
@@ -195,16 +214,17 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 
 	var input dtos.EditProductDTO
-	if err := ctx.BindJSON(&input); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "Invalid data",
-		})
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		helpers.HandleValidationError(ctx, err)
 		return
 	}
 
+	input.Sanitize()
+
 	var product models.Product
 
-	err = database.Pool.QueryRow(context.Background(), `
+	if err := database.Pool.QueryRow(context.Background(), `
 		UPDATE products
 		SET price = $2, description = $3
 		WHERE id = $1 AND is_deleted IS FALSE
@@ -219,10 +239,18 @@ func UpdateProduct(ctx *gin.Context) {
 		&product.Description,
 		&product.CreatedAt,
 		&product.UpdatedAt,
-	)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Product not found",
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Product not found",
+			})
+			return
+		}
+
+		log.Printf("error fetching product %d: %v", id, err)
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}

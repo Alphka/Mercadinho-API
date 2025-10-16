@@ -1,9 +1,10 @@
 module mercadinho
 
-go 1.25.2
+go 1.25.3
 
 require (
 	github.com/gin-gonic/gin v1.11.0
+	github.com/go-playground/validator/v10 v10.28.0
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/joho/godotenv v1.5.1
@@ -32,7 +33,6 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.28.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

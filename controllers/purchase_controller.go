@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log"
 	"mercadinho/database"
 	"mercadinho/dtos"
 	"mercadinho/helpers"
@@ -11,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
 // GetPurchases godoc
@@ -27,8 +30,10 @@ func GetPurchases(ctx *gin.Context) {
 
 	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases`).Scan(&totalItems)
 	if err != nil {
+		log.Printf("failed to get total purchases: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -63,8 +68,10 @@ func GetPurchases(ctx *gin.Context) {
 		LIMIT $2
 	`, page, pageSize)
 	if err != nil {
+		log.Printf("failed to get purchases: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Failed to get purchases",
 		})
 		return
 	}
@@ -86,15 +93,19 @@ func GetPurchases(ctx *gin.Context) {
 			&productsJSON,
 		)
 		if err != nil {
+			log.Printf("failed to scan purchases: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Failed to get purchases",
 			})
 			return
 		}
 
 		if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
+			log.Printf("failed to link purchase products: %v", err)
+
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-				Error: err.Error(),
+				Error: "Internal server error",
 			})
 			return
 		}
@@ -133,7 +144,7 @@ func GetPurchase(ctx *gin.Context) {
 	var purchase models.Purchase
 	var productsJSON []byte
 
-	err = database.Pool.QueryRow(context.Background(), `
+	if err := database.Pool.QueryRow(context.Background(), `
 		SELECT
 			purchase.id,
 			purchase.date,
@@ -165,17 +176,27 @@ func GetPurchase(ctx *gin.Context) {
 		&purchase.CreatedAt,
 		&purchase.UpdatedAt,
 		&productsJSON,
-	)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Purchase not found",
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Purchase not found",
+			})
+			return
+		}
+
+		log.Printf("error fetching purchase %d: %v", id, err)
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}
 
 	if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
+		log.Printf("failed to link purchase products: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -205,17 +226,18 @@ func UpdatePurchase(ctx *gin.Context) {
 	}
 
 	var input dtos.EditPurchaseDTO
-	if err := ctx.BindJSON(&input); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "Invalid data",
-		})
+
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		helpers.HandleValidationError(ctx, err)
 		return
 	}
+
+	input.Sanitize()
 
 	var purchase models.Purchase
 	var productsJSON []byte
 
-	err = database.Pool.QueryRow(context.Background(), `
+	if err := database.Pool.QueryRow(context.Background(), `
 		UPDATE purchases
 		SET date = $2
 		WHERE id = $1
@@ -253,17 +275,25 @@ func UpdatePurchase(ctx *gin.Context) {
 		&purchase.CreatedAt,
 		&purchase.UpdatedAt,
 		&productsJSON,
-	)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Error: "Purchase not found",
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "Purchase not found",
+			})
+			return
+		}
+
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Internal server error",
 		})
 		return
 	}
 
 	if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
+		log.Printf("failed to link purchase products: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: err.Error(),
+			Error: "Internal server error",
 		})
 		return
 	}
@@ -295,6 +325,8 @@ func DeletePurchase(ctx *gin.Context) {
 		WHERE id = $1
 	`, id)
 	if err != nil {
+		log.Printf("failed to delete purchase: %v", err)
+
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "Failed to delete purchase",
 		})

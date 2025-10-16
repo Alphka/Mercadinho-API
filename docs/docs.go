@@ -138,6 +138,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
                     }
                 }
             },
@@ -185,6 +191,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -561,6 +573,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
                     }
                 }
             },
@@ -906,9 +924,13 @@ const docTemplate = `{
         },
         "dtos.CreateProductDTO": {
             "type": "object",
+            "required": [
+                "description"
+            ],
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 3
                 },
                 "price": {
                     "type": "number",
@@ -1008,9 +1030,14 @@ const docTemplate = `{
         },
         "dtos.EditProductDTO": {
             "type": "object",
+            "required": [
+                "description",
+                "price"
+            ],
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 3
                 },
                 "price": {
                     "type": "number",

@@ -42,10 +42,13 @@ definitions:
   dtos.CreateProductDTO:
     properties:
       description:
+        minLength: 3
         type: string
       price:
         example: 10.5
         type: number
+    required:
+    - description
     type: object
   dtos.CreatePurchaseDTO:
     properties:
@@ -115,10 +118,14 @@ definitions:
   dtos.EditProductDTO:
     properties:
       description:
+        minLength: 3
         type: string
       price:
         example: 10.5
         type: number
+    required:
+    - description
+    - price
     type: object
   dtos.EditPurchaseDTO:
     properties:
@@ -377,6 +384,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get a customer by ID
       tags:
       - Customers
@@ -408,6 +419,10 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Update a customer by ID
@@ -653,6 +668,10 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Get a product by ID
