@@ -17,15 +17,19 @@ import (
 // @Summary    Get all products
 // @Tags       Products
 // @Produce    json
-// @Param      page          query  int  false  "Page number" default(1)
-// @Param      pageSize      query  int  false  "Number of items per page" default(20)
-// @Success    200  {array}   models.PaginatedResponse[models.Product]
-// @Failure    500  {object}  models.ErrorResponse
+// @Param      page      query     int  false  "Page number" default(1)
+// @Param      pageSize  query     int  false  "Number of items per page" default(20)
+// @Success    200       {array}   models.PaginatedResponse[models.Product]
+// @Failure    500       {object}  models.ErrorResponse
 // @Router     /products [get]
 func GetProducts(ctx *gin.Context) {
 	var totalItems int
 
-	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM products`).Scan(&totalItems)
+	err := database.Pool.QueryRow(context.Background(), `
+		SELECT COUNT(*)
+		FROM products
+		WHERE is_deleted IS FALSE
+	`).Scan(&totalItems)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
@@ -38,6 +42,7 @@ func GetProducts(ctx *gin.Context) {
 	rows, err := database.Pool.Query(context.Background(), `
 		SELECT id, price, description, created_at, updated_at
 		FROM products
+		WHERE is_deleted IS FALSE
 		ORDER BY created_at DESC
 		OFFSET (($1 - 1) * $2)
 		LIMIT $2
@@ -82,14 +87,14 @@ func GetProducts(ctx *gin.Context) {
 }
 
 // GetProduct godoc
-// @Summary   Get a product by ID
-// @Tags      Products
-// @Produce   json
-// @Param     id   path      int  true  "Product ID"
-// @Success   200  {object}  models.Product
-// @Failure   400  {object}  models.ErrorResponse
-// @Failure   404  {object}  models.ErrorResponse
-// @Router    /products/{id} [get]
+// @Summary    Get a product by ID
+// @Tags       Products
+// @Produce    json
+// @Param      id       path      int  true  "Product ID"
+// @Success    200      {object}  models.Product
+// @Failure    400      {object}  models.ErrorResponse
+// @Failure    404      {object}  models.ErrorResponse
+// @Router     /products/{id} [get]
 func GetProduct(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -104,7 +109,7 @@ func GetProduct(ctx *gin.Context) {
 	err = database.Pool.QueryRow(context.Background(), `
 		SELECT id, price, description, created_at, updated_at
 		FROM products
-		WHERE id = $1
+		WHERE id = $1 AND is_deleted IS FALSE
 	`, id).Scan(
 		&product.Id,
 		&product.Price,
@@ -123,15 +128,15 @@ func GetProduct(ctx *gin.Context) {
 }
 
 // CreateProduct godoc
-// @Summary      Create a new product
-// @Tags         Products
-// @Accept       json
-// @Produce      json
-// @Param        product   body      dtos.CreateProductDTO  true  "Product data"
-// @Success      201       {object}  models.Product
-// @Failure      400       {object}  models.ErrorResponse
-// @Failure      500       {object}  models.ErrorResponse
-// @Router       /products [post]
+// @Summary    Create a new product
+// @Tags       Products
+// @Accept     json
+// @Produce    json
+// @Param      product   body      dtos.CreateProductDTO  true  "Product data"
+// @Success    201       {object}  models.Product
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /products [post]
 func CreateProduct(ctx *gin.Context) {
 	var newProduct dtos.CreateProductDTO
 
@@ -169,17 +174,17 @@ func CreateProduct(ctx *gin.Context) {
 }
 
 // UpdateProduct godoc
-// @Summary      Update a product by ID
-// @Tags         Products
-// @Accept       json
-// @Produce      json
-// @Param        id       path      int                   true "Product ID"
-// @Param        product  body      dtos.EditProductDTO   true "Updated product data"
-// @Success      200      {object}  models.Product
-// @Failure      400      {object}  models.ErrorResponse
-// @Failure      404      {object}  models.ErrorResponse
-// @Failure      500      {object}  models.ErrorResponse
-// @Router       /products/{id} [put]
+// @Summary    Update a product by ID
+// @Tags       Products
+// @Accept     json
+// @Produce    json
+// @Param      id       path      int                   true "Product ID"
+// @Param      product  body      dtos.EditProductDTO   true "Updated product data"
+// @Success    200      {object}  models.Product
+// @Failure    400      {object}  models.ErrorResponse
+// @Failure    404      {object}  models.ErrorResponse
+// @Failure    500      {object}  models.ErrorResponse
+// @Router     /products/{id} [put]
 func UpdateProduct(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -202,7 +207,7 @@ func UpdateProduct(ctx *gin.Context) {
 	err = database.Pool.QueryRow(context.Background(), `
 		UPDATE products
 		SET price = $2, description = $3
-		WHERE id = $1
+		WHERE id = $1 AND is_deleted IS FALSE
 		RETURNING id, price, description, created_at, updated_at
 	`,
 		id,
@@ -223,4 +228,77 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 
 	ctx.IndentedJSON(http.StatusOK, product)
+}
+
+// DeleteProduct godoc
+// @Summary    Delete a product by ID
+// @Tags       Products
+// @Produce    json
+// @Param      id       path      int  true  "Product ID"
+// @Success    204
+// @Failure    400      {object}  models.ErrorResponse
+// @Failure    404      {object}  models.ErrorResponse
+// @Failure    500      {object}  models.ErrorResponse
+// @Router     /products/{id} [delete]
+func DeleteProduct(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "Invalid ID",
+		})
+		return
+	}
+
+	var productExists bool
+
+	if err := database.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS(
+			SELECT 1
+			FROM products
+			WHERE id = $1 AND is_deleted IS FALSE
+		)
+	`, id).Scan(&productExists); err != nil || !productExists {
+		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+			Error: "Product not found",
+		})
+		return
+	}
+
+	var hasLinkedPurchases bool
+
+	err = database.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS(
+			SELECT 1
+			FROM product_purchase
+			WHERE product_id = $1
+		)
+	`, id).Scan(&hasLinkedPurchases)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Failed to check product relations",
+		})
+		return
+	}
+
+	if hasLinkedPurchases {
+		_, err = database.Pool.Exec(context.Background(), `
+			UPDATE products
+			SET is_deleted = TRUE
+			WHERE id = $1
+		`, id)
+	} else {
+		_, err = database.Pool.Exec(context.Background(), `
+			DELETE FROM products
+			WHERE id = $1
+		`, id)
+	}
+
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Failed to delete product",
+		})
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
 }

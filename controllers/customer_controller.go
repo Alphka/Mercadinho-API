@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"mercadinho/database"
 	"mercadinho/dtos"
@@ -16,14 +17,14 @@ import (
 )
 
 // GetCustomers godoc
-// @Summary     Get all customers
-// @Tags        Customers
-// @Produce     json
-// @Param       page           query  int  false  "Page number" default(1)
-// @Param       pageSize       query  int  false  "Number of items per page" default(20)
-// @Success     200  {array}   models.PaginatedResponse[models.Customer]
-// @Failure     500  {object}  models.ErrorResponse
-// @Router      /customers [get]
+// @Summary    Get all customers
+// @Tags       Customers
+// @Produce    json
+// @Param      page      query     int  false  "Page number" default(1)
+// @Param      pageSize  query     int  false  "Number of items per page" default(20)
+// @Success    200       {array}   models.PaginatedResponse[models.Customer]
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /customers [get]
 func GetCustomers(ctx *gin.Context) {
 	var totalItems int
 
@@ -96,10 +97,10 @@ func GetCustomers(ctx *gin.Context) {
 // @Summary    Get a customer by ID
 // @Tags       Customers
 // @Produce    json
-// @Param      id   path      int  true  "Customer ID"
-// @Success    200  {object}  models.Customer
-// @Failure    400  {object}  models.ErrorResponse
-// @Failure    404  {object}  models.ErrorResponse
+// @Param      id        path      int  true  "Customer ID"
+// @Success    200       {object}  models.Customer
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    404       {object}  models.ErrorResponse
 // @Router     /customers/{id} [get]
 func GetCustomer(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -143,15 +144,15 @@ func GetCustomer(ctx *gin.Context) {
 }
 
 // CreateCustomer godoc
-// @Summary       Create a new customer
-// @Tags          Customers
-// @Accept        json
-// @Produce       json
-// @Param         customer  body      dtos.CreateCustomerDTO  true  "Customer data"
-// @Success       201       {object}  models.Customer
-// @Failure       400       {object}  models.ErrorResponse
-// @Failure       500       {object}  models.ErrorResponse
-// @Router        /customers [post]
+// @Summary    Create a new customer
+// @Tags       Customers
+// @Accept     json
+// @Produce    json
+// @Param      customer  body      dtos.CreateCustomerDTO  true  "Customer data"
+// @Success    201       {object}  models.Customer
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /customers [post]
 func CreateCustomer(ctx *gin.Context) {
 	var newCustomer dtos.CreateCustomerDTO
 
@@ -210,11 +211,11 @@ func CreateCustomer(ctx *gin.Context) {
 // @Tags          Customers
 // @Accept        json
 // @Produce       json
-// @Param         id       path      int                   true "Customer ID"
-// @Param         customer body      dtos.EditCustomerDTO  true "Updated customer data"
-// @Success       200      {object}  models.Customer
-// @Failure       400      {object}  models.ErrorResponse
-// @Failure       404      {object}  models.ErrorResponse
+// @Param         id        path      int                   true "Customer ID"
+// @Param         customer  body      dtos.EditCustomerDTO  true "Updated customer data"
+// @Success       200       {object}  models.Customer
+// @Failure       400       {object}  models.ErrorResponse
+// @Failure       404       {object}  models.ErrorResponse
 // @Router        /customers/{id} [put]
 func UpdateCustomer(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -293,11 +294,11 @@ func UpdateCustomer(ctx *gin.Context) {
 // @Summary       Delete a customer by ID
 // @Tags          Customers
 // @Produce       json
-// @Param         id   path      int  true  "Customer ID"
+// @Param         id        path      int  true  "Customer ID"
 // @Success       204
-// @Failure       400  {object}  models.ErrorResponse
-// @Failure       404  {object}  models.ErrorResponse
-// @Failure       500  {object}  models.ErrorResponse
+// @Failure       400       {object}  models.ErrorResponse
+// @Failure       404       {object}  models.ErrorResponse
+// @Failure       500       {object}  models.ErrorResponse
 // @Router        /customers/{id} [delete]
 func DeleteCustomer(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -330,14 +331,14 @@ func DeleteCustomer(ctx *gin.Context) {
 }
 
 // GetCustomerPendingPayments godoc
-// @Summary               Get all customer purchases with pending payments
-// @Tags                  Customers
-// @Produce               json
-// @Param                 id        path      int                     true  "Customer ID"
-// @Success               200       {object}  []models.CustomerPendingPayment
-// @Failure               400       {object}  models.ErrorResponse
-// @Failure               500       {object}  models.ErrorResponse
-// @Router                /customers/{id}/pending-payments [get]
+// @Summary    Get all customer purchases with pending payments
+// @Tags       Customers
+// @Produce    json
+// @Param      id        path      int                     true  "Customer ID"
+// @Success    200       {object}  []models.CustomerPendingPayment
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /customers/{id}/pending-payments [get]
 func GetCustomerPendingPayments(ctx *gin.Context) {
 	customerId, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -387,14 +388,14 @@ func GetCustomerPendingPayments(ctx *gin.Context) {
 }
 
 // GetCustomerOverduePayments godoc
-// @Summary               Get all customer purchases that are overdue (past payment date)
-// @Tags                  Customers
-// @Produce               json
-// @Param                 id        path      int  true  "Customer ID"
-// @Success               200       {object}  []models.CustomerPendingPayment
-// @Failure               400       {object}  models.ErrorResponse
-// @Failure               500       {object}  models.ErrorResponse
-// @Router                /customers/{id}/overdue-payments [get]
+// @Summary    Get all customer purchases that are overdue (past payment date)
+// @Tags       Customers
+// @Produce    json
+// @Param      id        path      int  true  "Customer ID"
+// @Success    200       {object}  []models.CustomerPendingPayment
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /customers/{id}/overdue-payments [get]
 func GetCustomerOverduePayments(ctx *gin.Context) {
 	customerId, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -450,17 +451,17 @@ func GetCustomerOverduePayments(ctx *gin.Context) {
 }
 
 // GetCustomerPurchases godoc
-// @Summary             Get all customer purchases
-// @Tags                Customers
-// @Produce             json
-// @Param               id             path  int  true  "Customer ID"
-// @Param               page           query  int  false  "Page number" default(1)
-// @Param               pageSize       query  int  false  "Number of items per page" default(20)
-// @Success             200  {array}   models.PaginatedResponse[models.Purchase]
-// @Failure             400  {object}  models.ErrorResponse
-// @Failure             404  {object}  models.ErrorResponse
-// @Failure             500  {object}  models.ErrorResponse
-// @Router              /customers/{id}/purchases [get]
+// @Summary    Get all customer purchases
+// @Tags       Customers
+// @Produce    json
+// @Param      id        path      int  true  "Customer ID"
+// @Param      page      query     int  false  "Page number" default(1)
+// @Param      pageSize  query     int  false  "Number of items per page" default(20)
+// @Success    200       {array}   models.PaginatedResponse[models.Purchase]
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    404       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /customers/{id}/purchases [get]
 func GetCustomerPurchases(ctx *gin.Context) {
 	customerId, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -470,7 +471,15 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		return
 	}
 
-	if err := database.Pool.QueryRow(context.Background(), "SELECT id FROM customers WHERE id = $1", customerId).Scan(&customerId); err != nil {
+	var customerExists bool
+
+	if err := database.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS(
+			SELECT 1
+			FROM customers
+			WHERE id = $1
+		)
+	`, customerId).Scan(&customerExists); err != nil || !customerExists {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Customer not found",
 		})
@@ -479,8 +488,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 
 	var totalItems int
 
-	err = database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases`).Scan(&totalItems)
-	if err != nil {
+	if err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases`).Scan(&totalItems); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -490,9 +498,29 @@ func GetCustomerPurchases(ctx *gin.Context) {
 	page, pageSize, totalPages := helpers.ValidatePagination(ctx, totalItems)
 
 	rows, err := database.Pool.Query(context.Background(), `
-		SELECT id, date, payment_date, customer_id, created_at, updated_at
-		FROM purchases
+		SELECT
+			purchase.id,
+			purchase.date,
+			purchase.payment_date,
+			purchase.customer_id,
+			purchase.created_at,
+			purchase.updated_at,
+			COALESCE(
+				json_agg(
+					json_build_object(
+						'id', product.id,
+						'price', product_purchase.price,
+						'description', product.description,
+						'quantity', product_purchase.quantity
+					)
+				) FILTER (WHERE product.id IS NOT NULL),
+				'[]'
+			) AS products
+		FROM purchases purchase
+		LEFT JOIN product_purchase ON product_purchase.purchase_id = purchase.id
+		LEFT JOIN products product ON product.id = product_purchase.product_id
 		WHERE customer_id = $1
+		GROUP BY purchase.id
 		ORDER BY created_at DESC
 		OFFSET (($2 - 1) * $3)
 		LIMIT $3
@@ -509,6 +537,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 
 	for rows.Next() {
 		var purchase models.Purchase
+		var productsJSON []byte
 
 		err := rows.Scan(
 			&purchase.Id,
@@ -517,6 +546,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 			&purchase.CustomerId,
 			&purchase.CreatedAt,
 			&purchase.UpdatedAt,
+			&productsJSON,
 		)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -525,16 +555,14 @@ func GetCustomerPurchases(ctx *gin.Context) {
 			return
 		}
 
-		purchases = append(purchases, purchase)
-	}
-
-	for index := range purchases {
-		if err := helpers.LinkProductsToPurchase(&purchases[index], nil); err != nil {
+		if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 				Error: err.Error(),
 			})
 			return
 		}
+
+		purchases = append(purchases, purchase)
 	}
 
 	ctx.IndentedJSON(http.StatusOK, models.PaginatedResponse[models.Purchase]{
@@ -547,17 +575,17 @@ func GetCustomerPurchases(ctx *gin.Context) {
 }
 
 // CreateCustomerPurchase godoc
-// @Summary               Register a new purchase
-// @Tags                  Customers
-// @Accept                json
-// @Produce               json
-// @Param                 id        path      int                     true  "Customer ID"
-// @Param                 purchase  body      dtos.CreatePurchaseDTO  true  "Purchase data"
-// @Success               201       {object}  models.Purchase
-// @Failure               400       {object}  models.ErrorResponse
-// @Failure               404       {object}  models.ErrorResponse
-// @Failure               500       {object}  models.ErrorResponse
-// @Router                /customers/{id}/purchases [post]
+// @Summary    Register a new purchase
+// @Tags       Customers
+// @Accept     json
+// @Produce    json
+// @Param      id        path      int                     true  "Customer ID"
+// @Param      purchase  body      dtos.CreatePurchaseDTO  true  "Purchase data"
+// @Success    201       {object}  models.Purchase
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    404       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /customers/{id}/purchases [post]
 func CreateCustomerPurchase(ctx *gin.Context) {
 	customerId, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -576,7 +604,15 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		return
 	}
 
-	if err := database.Pool.QueryRow(context.Background(), "SELECT id FROM customers WHERE id = $1", customerId).Scan(&customerId); err != nil {
+	var customerExists bool
+
+	if err := database.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS(
+			SELECT 1
+			FROM customers
+			WHERE id = $1
+		)
+	`, customerId).Scan(&customerExists); err != nil || !customerExists {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
 			Error: "Customer not found",
 		})
@@ -699,13 +735,32 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 		return
 	}
 
-	var foundProductIds []int
+	var productsJSON []byte
 
-	for key := range foundProductsWithPrice {
-		foundProductIds = append(foundProductIds, key)
+	err = database.Pool.QueryRow(context.Background(), `
+		SELECT COALESCE(
+			json_agg(
+				json_build_object(
+					'id', product.id,
+					'price', product_purchase.price,
+					'description', product.description,
+					'quantity', product_purchase.quantity
+				)
+			) FILTER (WHERE product.id IS NOT NULL),
+			'[]'
+		)
+		FROM product_purchase
+		LEFT JOIN products product ON product.id = product_purchase.product_id
+		WHERE product_purchase.purchase_id = $1
+	`, purchase.Id).Scan(&productsJSON)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "Failed to fetch purchase products",
+		})
+		return
 	}
 
-	if err := helpers.LinkProductsToPurchase(&purchase, &foundProductIds); err != nil {
+	if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
 		})

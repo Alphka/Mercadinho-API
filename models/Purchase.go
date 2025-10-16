@@ -14,9 +14,10 @@ type Purchase struct {
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   *time.Time `json:"updatedAt"`
 	Products    []struct {
-		Id       int     `json:"id"`
-		Price    float64 `json:"price"`
-		Quantity int     `json:"quantity"`
+		Id          int     `json:"id"`
+		Price       float64 `json:"price"`
+		Description string  `json:"description"`
+		Quantity    int     `json:"quantity"`
 	} `json:"products"`
 }
 

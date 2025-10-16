@@ -250,6 +250,8 @@ definitions:
       products:
         items:
           properties:
+            description:
+              type: string
             id:
               type: integer
             price:
@@ -604,6 +606,33 @@ paths:
       tags:
       - Products
   /products/{id}:
+    delete:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a product by ID
+      tags:
+      - Products
     get:
       parameters:
       - description: Product ID

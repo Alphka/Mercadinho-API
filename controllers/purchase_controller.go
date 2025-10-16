@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"mercadinho/database"
 	"mercadinho/dtos"
 	"mercadinho/helpers"
@@ -13,14 +14,14 @@ import (
 )
 
 // GetPurchases godoc
-// @Summary     Get all registered purchases
-// @Tags        Purchases
-// @Produce     json
-// @Param       page           query  int  false  "Page number" default(1)
-// @Param       pageSize       query  int  false  "Number of items per page" default(20)
-// @Success     200  {array}   models.PaginatedResponse[models.Purchase]
-// @Failure     500  {object}  models.ErrorResponse
-// @Router      /purchases [get]
+// @Summary    Get all registered purchases
+// @Tags       Purchases
+// @Produce    json
+// @Param      page      query     int  false  "Page number" default(1)
+// @Param      pageSize  query     int  false  "Number of items per page" default(20)
+// @Success    200       {array}   models.PaginatedResponse[models.Purchase]
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /purchases [get]
 func GetPurchases(ctx *gin.Context) {
 	var totalItems int
 
@@ -35,9 +36,29 @@ func GetPurchases(ctx *gin.Context) {
 	page, pageSize, totalPages := helpers.ValidatePagination(ctx, totalItems)
 
 	rows, err := database.Pool.Query(context.Background(), `
-		SELECT id, date, payment_date, customer_id, created_at, updated_at
-		FROM purchases
-		ORDER BY created_at DESC
+		SELECT
+			purchase.id,
+			purchase.date,
+			purchase.payment_date,
+			purchase.customer_id,
+			purchase.created_at,
+			purchase.updated_at,
+			COALESCE(
+				json_agg(
+					json_build_object(
+						'id', product.id,
+						'price', product_purchase.price,
+						'description', product.description,
+						'quantity', product_purchase.quantity
+					)
+				) FILTER (WHERE product.id IS NOT NULL),
+				'[]'
+			) AS products
+		FROM purchases purchase
+		LEFT JOIN product_purchase ON product_purchase.purchase_id = purchase.id
+		LEFT JOIN products product ON product.id = product_purchase.product_id
+		GROUP BY purchase.id
+		ORDER BY purchase.created_at DESC
 		OFFSET (($1 - 1) * $2)
 		LIMIT $2
 	`, page, pageSize)
@@ -53,6 +74,7 @@ func GetPurchases(ctx *gin.Context) {
 
 	for rows.Next() {
 		var purchase models.Purchase
+		var productsJSON []byte
 
 		err := rows.Scan(
 			&purchase.Id,
@@ -61,6 +83,7 @@ func GetPurchases(ctx *gin.Context) {
 			&purchase.CustomerId,
 			&purchase.CreatedAt,
 			&purchase.UpdatedAt,
+			&productsJSON,
 		)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -69,16 +92,14 @@ func GetPurchases(ctx *gin.Context) {
 			return
 		}
 
-		purchases = append(purchases, purchase)
-	}
-
-	for index := range purchases {
-		if err := helpers.LinkProductsToPurchase(&purchases[index], nil); err != nil {
+		if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 				Error: err.Error(),
 			})
 			return
 		}
+
+		purchases = append(purchases, purchase)
 	}
 
 	ctx.IndentedJSON(http.StatusOK, models.PaginatedResponse[models.Purchase]{
@@ -94,11 +115,11 @@ func GetPurchases(ctx *gin.Context) {
 // @Summary    Get a purchase by ID
 // @Tags       Purchases
 // @Produce    json
-// @Param      id             path  int  true  "Purchase ID"
-// @Success    200  {object}  models.Purchase
-// @Failure    400  {object}  models.ErrorResponse
-// @Failure    404  {object}  models.ErrorResponse
-// @Failure    500  {object}  models.ErrorResponse
+// @Param      id        path      int  true  "Purchase ID"
+// @Success    200       {object}  models.Purchase
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    404       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
 // @Router     /purchases/{id} [get]
 func GetPurchase(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -110,11 +131,32 @@ func GetPurchase(ctx *gin.Context) {
 	}
 
 	var purchase models.Purchase
+	var productsJSON []byte
 
 	err = database.Pool.QueryRow(context.Background(), `
-		SELECT id, date, payment_date, customer_id, created_at, updated_at
-		FROM purchases
-		WHERE id = $1
+		SELECT
+			purchase.id,
+			purchase.date,
+			purchase.payment_date,
+			purchase.customer_id,
+			purchase.created_at,
+			purchase.updated_at,
+			COALESCE(
+				json_agg(
+					json_build_object(
+						'id', product.id,
+						'price', product_purchase.price,
+						'description', product.description,
+						'quantity', product_purchase.quantity
+					)
+				) FILTER (WHERE product.id IS NOT NULL),
+				'[]'
+			) AS products
+		FROM purchases purchase
+		LEFT JOIN product_purchase ON product_purchase.purchase_id = purchase.id
+		LEFT JOIN products product ON product.id = product_purchase.product_id
+		WHERE purchase.id = $1
+		GROUP BY purchase.id
 	`, id).Scan(
 		&purchase.Id,
 		&purchase.Date,
@@ -122,6 +164,7 @@ func GetPurchase(ctx *gin.Context) {
 		&purchase.CustomerId,
 		&purchase.CreatedAt,
 		&purchase.UpdatedAt,
+		&productsJSON,
 	)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
@@ -130,7 +173,7 @@ func GetPurchase(ctx *gin.Context) {
 		return
 	}
 
-	if err := helpers.LinkProductsToPurchase(&purchase, nil); err != nil {
+	if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -141,17 +184,17 @@ func GetPurchase(ctx *gin.Context) {
 }
 
 // UpdatePurchase godoc
-// @Summary       Update a purchase by ID
-// @Tags          Purchases
-// @Accept        json
-// @Produce       json
-// @Param         id       path      int                   true "Purchase ID"
-// @Param         purchase body      dtos.EditPurchaseDTO  true "Updated purchase data"
-// @Success       200      {object}  models.Purchase
-// @Failure       400      {object}  models.ErrorResponse
-// @Failure       404      {object}  models.ErrorResponse
-// @Failure       500      {object}  models.ErrorResponse
-// @Router        /purchases/{id} [put]
+// @Summary    Update a purchase by ID
+// @Tags       Purchases
+// @Accept     json
+// @Produce    json
+// @Param      id        path      int                   true "Purchase ID"
+// @Param      purchase  body      dtos.EditPurchaseDTO  true "Updated purchase data"
+// @Success    200       {object}  models.Purchase
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    404       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /purchases/{id} [put]
 func UpdatePurchase(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -170,12 +213,35 @@ func UpdatePurchase(ctx *gin.Context) {
 	}
 
 	var purchase models.Purchase
+	var productsJSON []byte
 
 	err = database.Pool.QueryRow(context.Background(), `
 		UPDATE purchases
 		SET date = $2
 		WHERE id = $1
-		RETURNING id, date, payment_date, customer_id, created_at, updated_at
+		RETURNING
+			id,
+			date,
+			payment_date,
+			customer_id,
+			created_at,
+			updated_at,
+			(
+				SELECT COALESCE(
+					json_agg(
+						json_build_object(
+							'id', product.id,
+							'price', product_purchase.price,
+							'description', product.description,
+							'quantity', product_purchase.quantity
+						)
+					) FILTER (WHERE product.id IS NOT NULL),
+					'[]'
+				)
+				FROM product_purchase
+				JOIN products product ON product.id = product_purchase.product_id
+				WHERE product_purchase.purchase_id = purchases.id
+			) AS products
 	`,
 		id,
 		helpers.ParseDate(input.Date),
@@ -186,6 +252,7 @@ func UpdatePurchase(ctx *gin.Context) {
 		&purchase.CustomerId,
 		&purchase.CreatedAt,
 		&purchase.UpdatedAt,
+		&productsJSON,
 	)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
@@ -194,7 +261,7 @@ func UpdatePurchase(ctx *gin.Context) {
 		return
 	}
 
-	if err := helpers.LinkProductsToPurchase(&purchase, nil); err != nil {
+	if err := json.Unmarshal(productsJSON, &purchase.Products); err != nil {
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: err.Error(),
 		})
@@ -205,15 +272,15 @@ func UpdatePurchase(ctx *gin.Context) {
 }
 
 // DeletePurchase godoc
-// @Summary       Delete a purchase by ID
-// @Tags          Purchases
-// @Produce       json
-// @Param         id   path      int  true  "Purchase ID"
-// @Success       204
-// @Failure       400  {object}  models.ErrorResponse
-// @Failure       404  {object}  models.ErrorResponse
-// @Failure       500  {object}  models.ErrorResponse
-// @Router        /purchases/{id} [delete]
+// @Summary    Delete a purchase by ID
+// @Tags       Purchases
+// @Produce    json
+// @Param      id        path      int  true  "Purchase ID"
+// @Success    204
+// @Failure    400       {object}  models.ErrorResponse
+// @Failure    404       {object}  models.ErrorResponse
+// @Failure    500       {object}  models.ErrorResponse
+// @Router     /purchases/{id} [delete]
 func DeletePurchase(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
