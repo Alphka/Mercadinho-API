@@ -4,7 +4,7 @@ import "strings"
 
 type CreateProductDTO struct {
 	Price       float64 `json:"price" binding:"price" example:"10.50"`
-	Description string  `json:"description" binding:"required,min=3"`
+	Description string  `json:"description" binding:"required,min=3,max=255"`
 }
 
 func (dto *CreateProductDTO) Sanitize() {
@@ -13,7 +13,7 @@ func (dto *CreateProductDTO) Sanitize() {
 
 type EditProductDTO struct {
 	Price       float64 `json:"price" binding:"required,price" example:"10.50"`
-	Description string  `json:"description" binding:"required,min=3"`
+	Description string  `json:"description" binding:"required,min=3,max=255"`
 }
 
 func (dto *EditProductDTO) Sanitize() {

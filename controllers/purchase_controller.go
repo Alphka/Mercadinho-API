@@ -237,6 +237,8 @@ func UpdatePurchase(ctx *gin.Context) {
 	var purchase models.Purchase
 	var productsJSON []byte
 
+	purchaseDate, _ := helpers.ParseDate(input.Date)
+
 	if err := database.Pool.QueryRow(context.Background(), `
 		UPDATE purchases
 		SET date = $2
@@ -266,7 +268,7 @@ func UpdatePurchase(ctx *gin.Context) {
 			) AS products
 	`,
 		id,
-		helpers.ParseDate(input.Date),
+		purchaseDate,
 	).Scan(
 		&purchase.Id,
 		&purchase.Date,

@@ -14,7 +14,8 @@
 		"plpgsql",
 		"postgres",
 		"swaggo",
-		"trunc"
+		"trunc",
+		"uuid"
 	],
 	"cSpell.ignorePaths": [
 		"vscode-extension",

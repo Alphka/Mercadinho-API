@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"mercadinho/database"
+	"mercadinho/helpers"
 	"mercadinho/routes"
 	"os"
 
@@ -39,6 +40,11 @@ func main() {
 	// docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	if validate, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		validate.RegisterValidation("date", func(fieldLevel validator.FieldLevel) bool {
+			_, err := helpers.ParseDate(fieldLevel.Field().String())
+			return err == nil
+		})
+
 		validate.RegisterValidation("price", func(fieldLevel validator.FieldLevel) bool {
 			price, ok := fieldLevel.Field().Interface().(float64)
 			if !ok {
@@ -55,6 +61,11 @@ func main() {
 			}
 
 			return true
+		})
+
+		validate.RegisterValidation("phone", func(fieldLevel validator.FieldLevel) bool {
+			_, err := helpers.NormalizePhone(fieldLevel.Field().String())
+			return err == nil
 		})
 	}
 

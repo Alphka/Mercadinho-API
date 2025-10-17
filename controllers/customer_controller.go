@@ -181,6 +181,14 @@ func CreateCustomer(ctx *gin.Context) {
 
 	newCustomer.Sanitize()
 
+	normalizedPhone, err := helpers.NormalizePhone(newCustomer.Phone)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+
 	var customer models.Customer
 
 	if err := database.Pool.QueryRow(context.Background(), `
@@ -190,7 +198,7 @@ func CreateCustomer(ctx *gin.Context) {
 	`,
 		newCustomer.Name,
 		newCustomer.Email,
-		newCustomer.Phone,
+		normalizedPhone,
 		newCustomer.Address,
 		newCustomer.Number,
 		newCustomer.Complement,
@@ -256,6 +264,14 @@ func UpdateCustomer(ctx *gin.Context) {
 
 	input.Sanitize()
 
+	normalizedPhone, err := helpers.NormalizePhone(input.Phone)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+
 	var customer models.Customer
 
 	if err := database.Pool.QueryRow(context.Background(), `
@@ -277,7 +293,7 @@ func UpdateCustomer(ctx *gin.Context) {
 		id,
 		input.Name,
 		input.Email,
-		input.Phone,
+		normalizedPhone,
 		input.Address,
 		input.Number,
 		input.Complement,
@@ -683,6 +699,15 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 
 	newPurchase.Sanitize()
 
+	purchaseDate, _ := helpers.ParseDate(newPurchase.Date)
+
+	var paymentDate *time.Time
+	if newPurchase.PaymentDate != nil {
+		paymentDate, _ = helpers.ParseDate(*newPurchase.PaymentDate)
+	} else {
+		paymentDate = nil
+	}
+
 	productIds := make([]int, len(newPurchase.Products))
 
 	for index, product := range newPurchase.Products {
@@ -754,13 +779,6 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	}
 	defer tx.Rollback(context.Background())
 
-	var paymentDate *time.Time
-	if newPurchase.PaymentDate != nil {
-		paymentDate = helpers.ParseDate(*newPurchase.PaymentDate)
-	} else {
-		paymentDate = nil
-	}
-
 	var purchase models.Purchase
 
 	err = tx.QueryRow(context.Background(), `
@@ -770,7 +788,7 @@ func CreateCustomerPurchase(ctx *gin.Context) {
 	`,
 		customerId,
 		totalPrice,
-		helpers.ParseDate(newPurchase.Date),
+		purchaseDate,
 		paymentDate,
 	).Scan(
 		&purchase.Id,
