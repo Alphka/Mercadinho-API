@@ -885,25 +885,36 @@ const docTemplate = `{
             ],
             "properties": {
                 "address": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 10
                 },
                 "city": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
                 },
                 "complement": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 3
                 },
                 "neighborhood": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
                 },
                 "number": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 10
                 },
                 "paymentDay": {
                     "type": "integer",
@@ -930,6 +941,7 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string",
+                    "maxLength": 255,
                     "minLength": 3
                 },
                 "price": {
@@ -991,25 +1003,36 @@ const docTemplate = `{
             ],
             "properties": {
                 "address": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 10
                 },
                 "city": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
                 },
                 "complement": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 3
                 },
                 "neighborhood": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 3
                 },
                 "number": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 10
                 },
                 "paymentDay": {
                     "type": "integer",
@@ -1037,6 +1060,7 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string",
+                    "maxLength": 255,
                     "minLength": 3
                 },
                 "price": {

@@ -3,18 +3,29 @@ definitions:
   dtos.CreateCustomerDTO:
     properties:
       address:
+        maxLength: 255
+        minLength: 10
         type: string
       city:
+        maxLength: 100
+        minLength: 2
         type: string
       complement:
+        maxLength: 100
         type: string
       email:
+        maxLength: 255
         type: string
       name:
+        maxLength: 255
+        minLength: 3
         type: string
       neighborhood:
+        maxLength: 100
+        minLength: 3
         type: string
       number:
+        maxLength: 10
         type: string
       paymentDay:
         example: 10
@@ -42,6 +53,7 @@ definitions:
   dtos.CreateProductDTO:
     properties:
       description:
+        maxLength: 255
         minLength: 3
         type: string
       price:
@@ -79,18 +91,29 @@ definitions:
   dtos.EditCustomerDTO:
     properties:
       address:
+        maxLength: 255
+        minLength: 10
         type: string
       city:
+        maxLength: 100
+        minLength: 2
         type: string
       complement:
+        maxLength: 100
         type: string
       email:
+        maxLength: 255
         type: string
       name:
+        maxLength: 255
+        minLength: 3
         type: string
       neighborhood:
+        maxLength: 100
+        minLength: 3
         type: string
       number:
+        maxLength: 10
         type: string
       paymentDay:
         example: 10
@@ -118,6 +141,7 @@ definitions:
   dtos.EditProductDTO:
     properties:
       description:
+        maxLength: 255
         minLength: 3
         type: string
       price:
