@@ -8,7 +8,7 @@ type CreatePurchaseDTO struct {
 		Id       int `json:"id" binding:"required"`
 		Quantity int `json:"quantity" binding:"required,gte=1"`
 	} `json:"products" binding:"required,min=1"`
-	PaymentDate *string `json:"paymentDate" binding:"date" example:"2025-10-13"`
+	PaymentDate *string `json:"paymentDate" binding:"omitempty,date" example:"2025-10-13"`
 }
 
 func (dto *CreatePurchaseDTO) Sanitize() {

@@ -31,7 +31,7 @@ import (
 func GetCustomers(ctx *gin.Context) {
 	var totalItems int
 
-	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM products`).Scan(&totalItems)
+	err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM customers`).Scan(&totalItems)
 	if err != nil {
 		log.Printf("failed to get total customers: %v", err)
 
@@ -280,8 +280,8 @@ func UpdateCustomer(ctx *gin.Context) {
 			email = $3,
 			phone = $4,
 			address = $5,
-			complement = $6,
-			number = $7,
+			number = $6,
+			complement = $7,
 			neighborhood = $8,
 			city = $9,
 			state = $10,
@@ -551,7 +551,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 
 	var totalItems int
 
-	if err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases`).Scan(&totalItems); err != nil {
+	if err := database.Pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM purchases WHERE customer_id = $1`, customerId).Scan(&totalItems); err != nil {
 		log.Printf("failed to get total purchases: %v", err)
 
 		ctx.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -566,6 +566,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		SELECT
 			purchase.id,
 			purchase.date,
+			purchase.total_price,
 			purchase.payment_date,
 			purchase.customer_id,
 			purchase.created_at,
@@ -609,6 +610,7 @@ func GetCustomerPurchases(ctx *gin.Context) {
 		err := rows.Scan(
 			&purchase.Id,
 			&purchase.Date,
+			&purchase.TotalPrice,
 			&purchase.PaymentDate,
 			&purchase.CustomerId,
 			&purchase.CreatedAt,

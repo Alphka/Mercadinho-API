@@ -23,6 +23,10 @@ func HandleValidationError(ctx *gin.Context, err error) {
 			param := fieldError.Param()
 			kind := fieldError.Kind()
 
+			if kind == reflect.Ptr {
+				kind = fieldError.Type().Elem().Kind()
+			}
+
 			switch fieldError.Tag() {
 			case "required":
 				errorMessages = append(errorMessages, fmt.Sprintf("%s is required", fieldName))

@@ -7,7 +7,7 @@ type CreateCustomerDTO struct {
 	Email        string  `json:"email" binding:"required,email,max=255"`
 	Phone        string  `json:"phone" binding:"required,phone"`
 	Address      string  `json:"address" binding:"required,min=10,max=255"`
-	Complement   *string `json:"complement" binding:"max=100"`
+	Complement   *string `json:"complement" binding:"omitempty,max=100"`
 	Number       string  `json:"number" binding:"required,max=10"`
 	Neighborhood string  `json:"neighborhood" binding:"required,min=3,max=100"`
 	City         string  `json:"city" binding:"required,min=2,max=100"`
@@ -38,7 +38,7 @@ type EditCustomerDTO struct {
 	Email        string  `json:"email" binding:"required,email,max=255"`
 	Phone        string  `json:"phone" binding:"required,phone"`
 	Address      string  `json:"address" binding:"required,min=10,max=255"`
-	Complement   *string `json:"complement" binding:"max=100"`
+	Complement   *string `json:"complement" binding:"omitempty,max=100"`
 	Number       string  `json:"number" binding:"required,max=10"`
 	Neighborhood string  `json:"neighborhood" binding:"required,min=3,max=100"`
 	City         string  `json:"city" binding:"required,min=2,max=100"`

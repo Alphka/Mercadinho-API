@@ -44,6 +44,7 @@ func GetPurchases(ctx *gin.Context) {
 		SELECT
 			purchase.id,
 			purchase.date,
+			purchase.total_price,
 			purchase.payment_date,
 			purchase.customer_id,
 			purchase.created_at,
@@ -86,6 +87,7 @@ func GetPurchases(ctx *gin.Context) {
 		err := rows.Scan(
 			&purchase.Id,
 			&purchase.Date,
+			&purchase.TotalPrice,
 			&purchase.PaymentDate,
 			&purchase.CustomerId,
 			&purchase.CreatedAt,
@@ -148,6 +150,7 @@ func GetPurchase(ctx *gin.Context) {
 		SELECT
 			purchase.id,
 			purchase.date,
+			purchase.total_price,
 			purchase.payment_date,
 			purchase.customer_id,
 			purchase.created_at,
@@ -171,6 +174,7 @@ func GetPurchase(ctx *gin.Context) {
 	`, id).Scan(
 		&purchase.Id,
 		&purchase.Date,
+		&purchase.TotalPrice,
 		&purchase.PaymentDate,
 		&purchase.CustomerId,
 		&purchase.CreatedAt,
@@ -246,6 +250,7 @@ func UpdatePurchase(ctx *gin.Context) {
 		RETURNING
 			id,
 			date,
+			total_price,
 			payment_date,
 			customer_id,
 			created_at,
@@ -272,6 +277,7 @@ func UpdatePurchase(ctx *gin.Context) {
 	).Scan(
 		&purchase.Id,
 		&purchase.Date,
+		&purchase.TotalPrice,
 		&purchase.PaymentDate,
 		&purchase.CustomerId,
 		&purchase.CreatedAt,
