@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -21,8 +23,8 @@ func extractDatabaseName(dsn string) string {
 	}
 
 	last := parts[len(parts)-1]
-	if idx := strings.Index(last, "?"); idx != -1 {
-		return last[:idx]
+	if before, _, ok := strings.Cut(last, "?"); ok {
+		return before
 	}
 
 	return last
@@ -72,9 +74,15 @@ func Connect() {
 	fmt.Println("Connected to PostgreSQL")
 }
 
-func RunMigrations() {
-	migration, err := migrate.New(
-		"file://migrations",
+func RunMigrations(migrationsFS embed.FS) {
+	sourceDriver, err := iofs.New(migrationsFS, "migrations")
+	if err != nil {
+		log.Fatalf("Migration source error: %v\n", err)
+	}
+
+	migration, err := migrate.NewWithSourceInstance(
+		"iofs",
+		sourceDriver,
 		os.Getenv("DATABASE_URL"),
 	)
 	if err != nil {

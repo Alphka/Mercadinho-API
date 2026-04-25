@@ -1,6 +1,8 @@
 {
 	"watch": [
 		"**/*.go",
+		"go.mod",
+		"go.sum",
 		".env"
 	],
 	"ext": "go",

@@ -24,7 +24,11 @@ go.work.sum
 
 # env file
 .env
+.env*.local
 
 # Editor/IDE
 .idea/
 # .vscode/
+
+# Vercel
+.vercel
