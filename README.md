@@ -125,7 +125,7 @@ routes/       Route registration
 
 ## Testing
 
-The repository has no automated tests yet. A GitHub Actions workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the `gofmt` check, `go build`, `go vet` and `go test` on pushes to `main` and on pull requests. A GitHub Actions workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the `gofmt` check, `go build`, `go vet` and `go test` on pushes to `main` and on pull requests.
+The repository has no automated tests yet. A GitHub Actions workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the `gofmt` check, `go build`, `go vet` and `go test` on pushes to `main` and on pull requests.
 
 ## License
 
