@@ -1,9 +1,10 @@
 {
 	"version": 2,
-	"rewrites": [
+	"redirects": [
 		{
-			"source": "/(.*)",
-			"destination": "/"
+			"source": "/",
+			"destination": "/swagger/index.html",
+			"permanent": false
 		}
 	]
 }
