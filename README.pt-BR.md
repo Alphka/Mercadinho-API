@@ -129,4 +129,4 @@ O repositório ainda não possui testes automatizados. Um workflow do GitHub Act
 
 ## Licença
 
-Distribuído sob a [licença ISC](LICENSE.md).
+[ISC](LICENSE.md) © 2025 Kayo Souza

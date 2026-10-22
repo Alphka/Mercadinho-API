@@ -129,4 +129,4 @@ The repository has no automated tests yet. A GitHub Actions workflow ([`.github/
 
 ## License
 
-Distributed under the [ISC License](LICENSE.md).
+[ISC](LICENSE.md) © 2025 Kayo Souza
