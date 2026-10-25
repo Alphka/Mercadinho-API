@@ -125,7 +125,7 @@ func main() {
 	})
 
 	router.GET("/", func(context *gin.Context) {
-		context.Status(200)
+		context.Redirect(302, "/swagger/index.html")
 	})
 
 	router.GET("/swagger", func(context *gin.Context) {
@@ -137,6 +137,7 @@ func main() {
 	routes.RegisterCustomerRoutes(router)
 	routes.RegisterProductRoutes(router)
 	routes.RegisterPurchaseRoutes(router)
+	routes.RegisterHeadRoutes(router)
 
 	router.Run(host + ":" + port)
 }
